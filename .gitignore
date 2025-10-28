@@ -1,0 +1,5 @@
+# Ignore the 'bitto' directory and all its contents
+bitto/
+
+  git config --global user.email "aaditya.uzumaki@gmail.com"
+  git config --global user.name "Death301"

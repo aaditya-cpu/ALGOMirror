@@ -1,0 +1,102 @@
+# algorithms/sorting.py
+
+def bubble_sort(data):
+    """
+    Generates animation steps for Bubble Sort.
+    Compares adjacent elements and swaps them if they are in the wrong order.
+    """
+    steps = []
+    n = len(data)
+    arr = list(data)  # Create a mutable copy to sort in-place
+
+    for i in range(n):
+        swapped = False
+        # Last i elements are already in place
+        for j in range(0, n - i - 1):
+            # Step: Highlight the two elements being compared
+            steps.append({
+                'action': 'compare',
+                'indices': [j, j + 1],
+                'message': f'Comparing {arr[j]} and {arr[j+1]}.'
+            })
+            if arr[j] > arr[j + 1]:
+                # Step: If they need to be swapped, show the swap
+                steps.append({
+                    'action': 'swap',
+                    'indices': [j, j + 1],
+                    'message': f'{arr[j]} > {arr[j+1]}. Swapping.'
+                })
+                # Perform the swap on our local copy
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+                swapped = True
+        
+        # Step: Mark the last element of this pass as sorted
+        steps.append({
+            'action': 'sorted_element',
+            'indices': [n - 1 - i],
+            'message': f'Element {arr[n-1-i]} is now in its final sorted position.'
+        })
+
+        # If no swaps occurred in a pass, the array is sorted
+        if not swapped:
+            # Mark all remaining unsorted elements as sorted
+            for k in range(n - i - 1):
+                 steps.append({'action': 'sorted_element', 'indices': [k]})
+            break
+            
+    steps.append({'action': 'complete', 'message': 'Array is fully sorted.'})
+    return steps
+
+def selection_sort(data):
+    """
+    Generates animation steps for Selection Sort.
+    Finds the minimum element and places it at the beginning.
+    """
+    steps = []
+    n = len(data)
+    arr = list(data) # Create a mutable copy
+
+    for i in range(n):
+        min_idx = i
+        # Step: Highlight the start of the unsorted subarray
+        steps.append({
+            'action': 'highlight_min',
+            'indices': [min_idx],
+            'message': f'Finding the minimum in the unsorted part (from index {i}). Current minimum is {arr[min_idx]}.'
+        })
+        
+        # Find the minimum element in the remaining unsorted array
+        for j in range(i + 1, n):
+            # Step: Compare current element with the current minimum
+            steps.append({
+                'action': 'compare',
+                'indices': [j, min_idx],
+                'message': f'Comparing {arr[j]} with current minimum {arr[min_idx]}.'
+            })
+            if arr[j] < arr[min_idx]:
+                # Step: Found a new minimum
+                old_min_idx = min_idx
+                min_idx = j
+                steps.append({
+                    'action': 'highlight_min',
+                    'indices': [min_idx],
+                    'message': f'Found a new minimum: {arr[min_idx]}.'
+                })
+        
+        # Step: Swap the found minimum element with the first element of the unsorted part
+        steps.append({
+            'action': 'swap',
+            'indices': [i, min_idx],
+            'message': f'Swapping minimum element {arr[min_idx]} with element at index {i} ({arr[i]}).'
+        })
+        arr[i], arr[min_idx] = arr[min_idx], arr[i]
+        
+        # Step: Mark the element at index i as sorted
+        steps.append({
+            'action': 'sorted_element',
+            'indices': [i],
+            'message': f'Element {arr[i]} is now in its final sorted position.'
+        })
+
+    steps.append({'action': 'complete', 'message': 'Array is fully sorted.'})
+    return steps

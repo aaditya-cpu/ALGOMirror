@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Algorithmic Mirror</title>
+    <!-- Link to the stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- Google Fonts for a modern look -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <h1>📜 Algorithmic Mirror</h1>
+        <p>A Grimoire of Computational Logic</p>
+    </header>
+
+    <main class="container">
+        <!-- ================================================================= -->
+        <!-- CONTROLS PANEL (LEFT)                                           -->
+        <!-- ================================================================= -->
+        <section class="panel controls-panel">
+            <h2>Controls</h2>
+            
+            <!-- Data Structure & Algorithm Selection -->
+            <div class="control-group">
+                <label for="ds-select">Data Structure:</label>
+                <select id="ds-select">
+                    <!-- Options will be populated by JS from the content file -->
+                </select>
+            </div>
+            <div class="control-group">
+                <label for="algo-select">Algorithm:</label>
+                <select id="algo-select">
+                    <!-- Options will be populated by JS based on the selected DS -->
+                </select>
+            </div>
+            
+            <hr>
+            
+            <!-- Data Generation Section -->
+            <h3>Generate Data</h3>
+            <div class="control-group">
+                <label for="data-size">Size / Number of Nodes:</label>
+                <input type="number" id="data-size" value="12" min="3" max="50">
+            </div>
+            <!-- Contextual Generation Buttons: JS will show/hide these -->
+            <div id="generation-controls">
+                <button id="generate-random-array-btn">Generate Random Array</button>
+                <button id="generate-sorted-array-btn" style="display:none;">Generate Sorted Array</button>
+                <button id="generate-tree-btn" style="display:none;">Generate Tree</button>
+                <button id="generate-graph-btn" style="display:none;">Load Example Graph</button>
+            </div>
+
+            <hr>
+
+            <!-- Execution Section -->
+            <h3>Execution</h3>
+            <!-- Contextual Inputs: JS will show/hide these based on algorithm -->
+            <div id="execution-inputs">
+                <div class="control-group" id="target-input-group" style="display:none;">
+                    <label for="target-value">Target Value (for searching):</label>
+                    <input type="number" id="target-value" placeholder="e.g., 42">
+                </div>
+                <div class="control-group" id="start-node-group" style="display:none;">
+                    <label for="start-node-select">Start Node (for traversals):</label>
+                    <select id="start-node-select">
+                        <!-- Options populated by JS after graph is loaded -->
+                    </select>
+                </div>
+            </div>
+
+            <!-- Main Action Button -->
+            <button id="run-btn" disabled>Run Algorithm</button>
+            
+            <!-- Animation Speed Control -->
+            <div class="control-group">
+                <label for="speed-slider">Animation Speed (Fast to Slow):</label>
+                <input type="range" id="speed-slider" min="50" max="1500" value="500" step="50">
+            </div>
+        </section>
+
+        <!-- ================================================================= -->
+        <!-- VISUALIZATION PANEL (CENTER)                                    -->
+        <!-- ================================================================= -->
+        <section class="panel visualization-panel">
+            <h2 id="visualization-title">Visualization</h2>
+            <!-- Main container for visuals. JS will inject array divs or an SVG here. -->
+            <div id="visualization-container">
+                <!-- Visuals Rendered Here -->
+            </div>
+            <!-- Separate container for auxiliary structures like queues, stacks, or DP tables. -->
+            <div id="aux-visualization-container">
+                <!-- Auxiliary Visuals Rendered Here (e.g., Queue for BFS) -->
+            </div>
+            <!-- Log for step-by-step messages. -->
+            <div id="status-log">
+                <p>Welcome! Select a data structure to begin.</p>
+            </div>
+        </section>
+
+        <!-- ================================================================= -->
+        <!-- INFORMATION PANEL (RIGHT)                                       -->
+        <!-- ================================================================= -->
+        <section class="panel info-panel">
+            <h2 id="info-title">Algorithm Details</h2>
+            
+            <!-- Tab navigation for switching between info sections -->
+            <div class="info-tabs">
+                <button class="tab-link active" data-tab="idea-tab">Key Idea</button>
+                <button class="tab-link" data-tab="pseudo-tab">Pseudocode</button>
+                <button class="tab-link" data-tab="complexity-tab">Complexity</button>
+            </div>
+            
+            <!-- Content for "Key Idea" tab -->
+            <div id="idea-tab" class="tab-content active">
+                <p id="info-idea">Select an algorithm to see its core concept.</p>
+            </div>
+            
+            <!-- Content for "Pseudocode" tab -->
+            <div id="pseudo-tab" class="tab-content">
+                <pre><code id="info-pseudo">Select an algorithm to see its pseudocode.</code></pre>
+            </div>
+            
+            <!-- Content for "Complexity" tab -->
+            <div id="complexity-tab" class="tab-content">
+                <h3>Time Complexity</h3>
+                <ul>
+                    <li><strong>Best Case:</strong> <span id="time-best">...</span></li>
+                    <li><strong>Average Case:</strong> <span id="time-avg">...</span></li>
+                    <li><strong>Worst Case:</strong> <span id="time-worst">...</span></li>
+                </ul>
+                <h3>Space Complexity</h3>
+                <ul>
+                    <li><strong>Worst Case:</strong> <span id="space-worst">...</span></li>
+                </ul>
+            </div>
+        </section>
+    </main>
+
+    <!-- JavaScript files are loaded at the end of the body for faster page rendering -->
+    <script src="{{ url_for('static', filename='js/animator.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
