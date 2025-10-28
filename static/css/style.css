@@ -258,3 +258,25 @@ pre {
 }
 ul { padding-left: 20px; }
 li { margin-bottom: 5px; }
+
+/* --- Dijkstra Specific Styles --- */
+.distance-label {
+    fill: var(--text-color);
+    font-size: 14px;
+    font-family: var(--font-code);
+    text-anchor: middle;
+    transition: all 0.3s ease;
+}
+.distance-label.updated {
+    fill: var(--highlight-compare);
+    font-weight: bold;
+    transform: scale(1.2);
+}
+.node.path-node circle {
+    fill: var(--highlight-found);
+    stroke: var(--highlight-found);
+}
+.link.path-link {
+    stroke: var(--highlight-found);
+    stroke-width: 5px;
+}

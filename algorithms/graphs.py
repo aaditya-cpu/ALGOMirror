@@ -1,6 +1,6 @@
 # algorithms/graphs.py
 from collections import deque
-
+import heapq 
 def bfs(graph_data, start_node):
     """
     Generates animation steps for Breadth-First Search.
@@ -132,3 +132,58 @@ def dfs(graph_data, start_node):
 
     steps.append({'action': 'complete', 'message': 'DFS complete. All reachable nodes visited.'})
     return steps
+def dijkstra_steps(graph_data, start_node, end_node):
+    """Generates animation steps for Dijkstra's Shortest Path algorithm."""
+    adj = graph_data['adjacency_list']
+    if start_node not in adj or end_node not in adj:
+        return [{'action': 'error', 'message': 'Start or end node not in graph.'}]
+
+    steps = []
+    distances = {node: float('inf') for node in adj}
+    predecessors = {node: None for node in adj}
+    distances[start_node] = 0
+    
+    # Priority queue stores (distance, node)
+    pq = [(0, start_node)]
+
+    steps.append({'action': 'init_distances', 'distances': distances, 'message': f'Initializing all distances to infinity, source {start_node} to 0.'})
+
+    while pq:
+        dist, u = heapq.heappop(pq)
+
+        # If we've found a shorter path already, skip
+        if dist > distances[u]:
+            continue
+
+        steps.append({'action': 'visit_node', 'node': u, 'message': f'Visiting node {u}, current shortest distance is {dist}.'})
+
+        for neighbor_data in adj.get(u, []):
+            v = neighbor_data['node']
+            weight = neighbor_data['weight']
+            
+            steps.append({'action': 'explore_edge', 'from': u, 'to': v, 'weight': weight, 'message': f'Exploring edge from {u} to {v} with weight {weight}.'})
+
+            if distances[u] + weight < distances[v]:
+                # Found a shorter path to v
+                distances[v] = distances[u] + weight
+                predecessors[v] = u
+                heapq.heappush(pq, (distances[v], v))
+                steps.append({'action': 'update_distance', 'node': v, 'new_dist': distances[v], 'distances': dict(distances), 'message': f'Found shorter path to {v}! New distance: {distances[v]}.'})
+            else:
+                steps.append({'action': 'skip_update', 'from': u, 'to': v, 'message': f'Path to {v} via {u} is not shorter.'})
+    
+    # Reconstruct and highlight the final path
+    path = []
+    current = end_node
+    while current is not None:
+        path.insert(0, current)
+        current = predecessors[current]
+
+    if path[0] == start_node:
+        steps.append({'action': 'highlight_path', 'path': path, 'distance': distances[end_node], 'message': f'Shortest path found! Total distance: {distances[end_node]}.'})
+    else:
+        steps.append({'action': 'path_not_found', 'end_node': end_node, 'message': f'No path found from {start_node} to {end_node}.'})
+        
+    steps.append({'action': 'complete', 'message': 'Dijkstra\'s algorithm complete.'})
+    return steps
+

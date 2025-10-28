@@ -97,21 +97,35 @@ def generate_data():
         return jsonify(arr)
 
     elif dtype == 'graph':
-        # Using a static graph for consistent, clean layouts in the visualization.
-        graph = {
-            "nodes": {
-                "A": {"x": 100, "y": 200}, "B": {"x": 250, "y": 100},
-                "C": {"x": 250, "y": 300}, "D": {"x": 400, "y": 100},
-                "E": {"x": 400, "y": 300}, "F": {"x": 550, "y": 200}
-            },
-            "adjacency_list": {
-                "A": ["B", "C"], "B": ["A", "D"], "C": ["A", "E"],
-                "D": ["B", "E", "F"], "E": ["C", "D"], "F": ["D"]
-            }
-        }
-        return jsonify(graph)
+        # Generate a dynamic, weighted graph
+        num_nodes = min(size, 26) # Limit to 26 nodes (A-Z)
+        nodes = {}
+        node_ids = [chr(65 + i) for i in range(num_nodes)] # A, B, C...
 
-    # For conceptual algorithms, data is often user-input, not generated here.
+        # Position nodes randomly in a circle for a clean layout
+        width, height = 700, 350
+        center_x, center_y = width / 2, height / 2
+        radius = min(center_x, center_y) * 0.8
+        for i, node_id in enumerate(node_ids):
+            angle = (2 * math.pi / num_nodes) * i
+            nodes[node_id] = {
+                "x": center_x + radius * math.cos(angle),
+                "y": center_y + radius * math.sin(angle)
+            }
+
+        adjacency_list = {node_id: [] for node_id in node_ids}
+        num_edges = int(num_nodes * 1.5) # Create a reasonable number of edges
+
+        for _ in range(num_edges):
+            u, v = random.sample(node_ids, 2)
+            # Ensure no duplicate edges
+            if not any(neighbor['node'] == v for neighbor in adjacency_list[u]):
+                weight = random.randint(1, 10)
+                adjacency_list[u].append({"node": v, "weight": weight})
+                adjacency_list[v].append({"node": u, "weight": weight}) # Undirected graph
+
+        graph = {"nodes": nodes, "adjacency_list": adjacency_list}
+        return jsonify(graph)
     return jsonify([])
 
 @app.route('/run_algorithm', methods=['POST'])

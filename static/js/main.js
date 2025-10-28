@@ -25,7 +25,9 @@ document.addEventListener('DOMContentLoaded', () => {
         executionInputs: document.getElementById('execution-inputs'),
         targetInputGroup: document.getElementById('target-input-group'),
         startNodeGroup: document.getElementById('start-node-group'),
+        endNodeGroup: document.getElementById('end-node-group'),
         startNodeSelect: document.getElementById('start-node-select'),
+        endNodeSelect: document.getElementById('end-node-select'),
         targetValueInput: document.getElementById('target-value'),
         info: {
             title: document.getElementById('info-title'),
@@ -116,6 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Hide all contextual input fields
         UI.targetInputGroup.style.display = 'none';
         UI.startNodeGroup.style.display = 'none';
+        UI.endNodeGroup.style.display = 'none';
         
         // Show inputs based on the algorithm's category
         if (algoCategory === 'Searching') {
@@ -123,6 +126,9 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (['Graph Traversal', 'Shortest Path'].includes(algoCategory)) {
             UI.startNodeGroup.style.display = 'block';
         }
+            if (algoKey === 'dijkstra') { // Specifically for Dijkstra
+        UI.endNodeGroup.style.display = 'block';
+    
     }
 
     function updateInfoPanel() {
@@ -182,15 +188,17 @@ document.addEventListener('DOMContentLoaded', () => {
             animator.updateLog("New data generated. Ready to run an algorithm.");
 
             // If it's a graph, populate the start node selector
-            if (currentDataType === 'graph' && currentData.nodes) {
-                UI.startNodeSelect.innerHTML = '';
-                Object.keys(currentData.nodes).sort().forEach(nodeId => {
-                    const option = document.createElement('option');
-                    option.value = nodeId;
-                    option.textContent = `Node ${nodeId}`;
-                    UI.startNodeSelect.appendChild(option);
-                });
-            }
+        if (currentDataType === 'graph' && currentData.nodes) {
+            UI.startNodeSelect.innerHTML = '';
+            UI.endNodeSelect.innerHTML = ''; // <-- ADD
+            Object.keys(currentData.nodes).sort().forEach(nodeId => {
+                const option = document.createElement('option');
+                option.value = nodeId;
+                option.textContent = `Node ${nodeId}`;
+                UI.startNodeSelect.appendChild(option.cloneNode(true)); // Use cloneNode for efficiency
+                UI.endNodeSelect.appendChild(option);
+            });
+    }
         } catch (error) {
             console.error("Failed to generate data:", error);
             animator.updateLog("Error: Could not generate data from server.");
@@ -204,6 +212,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!currentData) {
             animator.updateLog("Please generate data first.");
             return;
+        }
+            if (algoKey === 'dijkstra') {
+        params.start_node = UI.startNodeSelect.value;
+        params.end_node = UI.endNodeSelect.value;
         }
 
         const params = {
