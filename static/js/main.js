@@ -8,27 +8,28 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentData = null;
     let currentDataType = 'array'; // Default on load
     const animator = new Animator(
-        'visualization-container', 
-        'aux-visualization-container', 
-        'status-log', 
+        'visualization-container',
+        'aux-visualization-container',
+        'status-log',
         'speed-slider'
     );
 
     // --- DOM ELEMENT REFERENCES ---
-    // Using a single object to hold references for cleaner code
+    // A single object to hold all UI element references for clean access
     const UI = {
         dsSelect: document.getElementById('ds-select'),
         algoSelect: document.getElementById('algo-select'),
         dataSizeInput: document.getElementById('data-size'),
         runBtn: document.getElementById('run-btn'),
         generationControls: document.getElementById('generation-controls'),
-        executionInputs: document.getElementById('execution-inputs'),
+        // Input groups that are shown/hidden contextually
         targetInputGroup: document.getElementById('target-input-group'),
-        startNodeGroup: document.getElementById('start-node-group'),
-        endNodeGroup: document.getElementById('end-node-group'),
-        startNodeSelect: document.getElementById('start-node-select'),
-        endNodeSelect: document.getElementById('end-node-select'),
         targetValueInput: document.getElementById('target-value'),
+        startNodeGroup: document.getElementById('start-node-group'),
+        startNodeSelect: document.getElementById('start-node-select'),
+        endNodeGroup: document.getElementById('end-node-group'),
+        endNodeSelect: document.getElementById('end-node-select'),
+        // Info panel elements
         info: {
             title: document.getElementById('info-title'),
             idea: document.getElementById('info-idea'),
@@ -41,13 +42,12 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     /**
-     * Kicks off the application by fetching content and setting up the initial UI state.
+     * Kicks off the application by fetching content and setting up the initial UI.
      */
     async function initialize() {
         try {
             const response = await fetch('/get_content');
             ALL_CONTENT = await response.json();
-            
             populateDataStructureSelect();
             handleDataStructureChange(); // Set up UI for the default selection
         } catch (error) {
@@ -57,13 +57,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =================================================================
-    // 2. UI UPDATE & MANAGEMENT FUNCTIONS
+    // 2. UI UPDATE & MANAGEMENT
     // =================================================================
 
     function populateDataStructureSelect() {
         UI.dsSelect.innerHTML = '';
         Object.keys(ALL_CONTENT.data_structures).forEach(dsKey => {
-            // We only add options for data structures that have associated visualizable algorithms.
             const hasAlgos = Object.values(ALL_CONTENT.algorithms).some(algo => algo.ds === dsKey);
             if (hasAlgos) {
                 const ds = ALL_CONTENT.data_structures[dsKey];
@@ -77,64 +76,69 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function populateAlgoSelect() {
         const selectedDs = UI.dsSelect.value;
-        UI.algoSelect.innerHTML = ''; // Clear previous options
-        
+        UI.algoSelect.innerHTML = '';
         Object.keys(ALL_CONTENT.algorithms).forEach(key => {
-            const algo = ALL_CONTENT.algorithms[key];
-            // Filter algorithms to match the selected data structure
-            if (algo.ds === selectedDs) {
+            if (ALL_CONTENT.algorithms[key].ds === selectedDs) {
+                const algo = ALL_CONTENT.algorithms[key];
                 const option = document.createElement('option');
                 option.value = key;
                 option.textContent = algo.name;
                 UI.algoSelect.appendChild(option);
             }
         });
-        handleAlgorithmChange(); // Update other UI elements based on the new selection
+        handleAlgorithmChange();
     }
 
     function updateGenerationControls() {
-        // Hide all generation buttons
         UI.generationControls.querySelectorAll('button').forEach(btn => btn.style.display = 'none');
-        
-        // Show only the buttons relevant to the selected data structure
+        // The 'data-size' input label should be context-aware
+        const sizeLabel = document.querySelector('label[for="data-size"]');
+
         switch (currentDataType) {
             case 'array':
                 document.getElementById('generate-random-array-btn').style.display = 'block';
                 document.getElementById('generate-sorted-array-btn').style.display = 'block';
+                sizeLabel.textContent = "Array Size:";
                 break;
             case 'tree':
                 document.getElementById('generate-tree-btn').style.display = 'block';
+                sizeLabel.textContent = "Number of Nodes:";
                 break;
             case 'graph':
                 document.getElementById('generate-graph-btn').style.display = 'block';
+                sizeLabel.textContent = "Number of Nodes:";
+                break;
+            case 'conceptual':
+                // For conceptual algorithms, the 'size' input is used for 'N'
+                sizeLabel.textContent = "Input N value (e.g., for Fib):";
                 break;
         }
     }
 
     function updateExecutionInputs() {
         const algoKey = UI.algoSelect.value;
-        const algoCategory = ALL_CONTENT.algorithms[algoKey]?.category;
+        const algo = ALL_CONTENT.algorithms[algoKey];
 
-        // Hide all contextual input fields
+        // Hide all contextual input fields by default
         UI.targetInputGroup.style.display = 'none';
         UI.startNodeGroup.style.display = 'none';
         UI.endNodeGroup.style.display = 'none';
-        
-        // Show inputs based on the algorithm's category
-        if (algoCategory === 'Searching') {
+
+        // Show inputs based on the algorithm's specific needs
+        if (algo?.category === 'Searching') {
             UI.targetInputGroup.style.display = 'block';
-        } else if (['Graph Traversal', 'Shortest Path'].includes(algoCategory)) {
+        }
+        if (['Graph Traversal', 'Shortest Path'].includes(algo?.category)) {
             UI.startNodeGroup.style.display = 'block';
         }
-            if (algoKey === 'dijkstra') { // Specifically for Dijkstra
-        UI.endNodeGroup.style.display = 'block';
-    
+        if (algoKey === 'dijkstra') {
+            UI.endNodeGroup.style.display = 'block';
+        }
     }
 
     function updateInfoPanel() {
         const algoKey = UI.algoSelect.value;
         if (!algoKey || !ALL_CONTENT.algorithms[algoKey]) return;
-        
         const content = ALL_CONTENT.algorithms[algoKey];
         UI.info.title.textContent = content.name;
         UI.info.idea.textContent = content.idea;
@@ -154,24 +158,26 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =================================================================
-    // 3. EVENT HANDLERS
+    // 3. EVENT HANDLERS & DATA FLOW
     // =================================================================
 
     function handleDataStructureChange() {
         currentDataType = UI.dsSelect.value;
         populateAlgoSelect();
         updateGenerationControls();
-        generateData(); // Automatically generate new data when the type changes
+        if (currentDataType !== 'conceptual') {
+            generateData();
+        } else {
+            // For conceptual types, just clear the board, no data generation needed
+            animator.clearAll();
+            animator.updateLog("Select a conceptual algorithm and click Run.");
+        }
     }
 
     function handleAlgorithmChange() {
         updateExecutionInputs();
         updateInfoPanel();
     }
-    
-    // =================================================================
-    // 4. CORE LOGIC (API COMMUNICATION & ORCHESTRATION)
-    // =================================================================
 
     async function generateData(isSorted = false) {
         setControlsDisabled(true);
@@ -179,26 +185,24 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch('/generate_data', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ size: UI.dataSizeInput.value, dtype: currentDataType, sorted: isSorted })
             });
             currentData = await response.json();
-            
             animator.drawInitialState(currentDataType, currentData);
             animator.updateLog("New data generated. Ready to run an algorithm.");
 
-            // If it's a graph, populate the start node selector
-        if (currentDataType === 'graph' && currentData.nodes) {
-            UI.startNodeSelect.innerHTML = '';
-            UI.endNodeSelect.innerHTML = ''; // <-- ADD
-            Object.keys(currentData.nodes).sort().forEach(nodeId => {
-                const option = document.createElement('option');
-                option.value = nodeId;
-                option.textContent = `Node ${nodeId}`;
-                UI.startNodeSelect.appendChild(option.cloneNode(true)); // Use cloneNode for efficiency
-                UI.endNodeSelect.appendChild(option);
-            });
-    }
+            if (currentDataType === 'graph' && currentData.nodes) {
+                UI.startNodeSelect.innerHTML = '';
+                UI.endNodeSelect.innerHTML = '';
+                Object.keys(currentData.nodes).sort().forEach(nodeId => {
+                    const option = document.createElement('option');
+                    option.value = nodeId;
+                    option.textContent = `Node ${nodeId}`;
+                    UI.startNodeSelect.appendChild(option.cloneNode(true));
+                    UI.endNodeSelect.appendChild(option);
+                });
+            }
         } catch (error) {
             console.error("Failed to generate data:", error);
             animator.updateLog("Error: Could not generate data from server.");
@@ -209,46 +213,68 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function runAlgorithm() {
         const algoKey = UI.algoSelect.value;
-        if (!currentData) {
-            animator.updateLog("Please generate data first.");
-            return;
-        }
-            if (algoKey === 'dijkstra') {
-        params.start_node = UI.startNodeSelect.value;
-        params.end_node = UI.endNodeSelect.value;
-        }
+        const algoInfo = ALL_CONTENT.algorithms[algoKey];
+        if (!algoInfo) return;
 
-        const params = {
-            algorithm: algoKey,
-            input_data: currentData
-        };
-        const algoCategory = ALL_CONTENT.algorithms[algoKey]?.category;
-        
-        // Add specific parameters based on algorithm type
-        if (algoCategory === 'Searching') {
-            if (!UI.targetValueInput.value) {
-                animator.updateLog("Please enter a target value to search for.");
-                return;
-            }
-            params.target = UI.targetValueInput.value;
-        }
-        if (['Graph Traversal', 'Shortest Path'].includes(algoCategory)) {
-            params.start_node = UI.startNodeSelect.value;
+        // Initialize parameters for the API call
+        const params = { algorithm: algoKey };
+
+        // Handle parameter gathering based on algorithm type
+        // This is a much more robust way to build the params object
+        switch (algoInfo.ds) {
+            case 'array':
+            case 'tree':
+            case 'graph':
+                if (!currentData) {
+                    animator.updateLog("Please generate data first.");
+                    return;
+                }
+                params.input_data = currentData;
+                if (algoInfo.category === 'Searching') {
+                    if (!UI.targetValueInput.value) {
+                        animator.updateLog("Please enter a target value.");
+                        return;
+                    }
+                    params.target = UI.targetValueInput.value;
+                }
+                if (['Graph Traversal', 'Shortest Path'].includes(algoInfo.category)) {
+                    params.start_node = UI.startNodeSelect.value;
+                }
+                if (algoKey === 'dijkstra') {
+                    params.end_node = UI.endNodeSelect.value;
+                }
+                break;
+
+            case 'conceptual':
+                // For conceptual algorithms, we take 'N' from the main size input
+                const nValue = UI.dataSizeInput.value;
+                if (!nValue || nValue < 0) {
+                    animator.updateLog("Please enter a valid non-negative N value.");
+                    return;
+                }
+                params.n = nValue;
+                // Note: More complex conceptual algos (Knapsack) would need more UI elements.
+                // For this project, we'll keep it simple.
+                break;
         }
 
         setControlsDisabled(true);
         try {
             const response = await fetch('/run_algorithm', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(params)
             });
             const result = await response.json();
-            
             if (result.error) throw new Error(result.error);
-            
-            // Redraw initial state to reset visuals before starting the new animation
-            animator.drawInitialState(currentDataType, currentData);
+
+            // Redraw initial state only if it's a data-driven algorithm
+            if (algoInfo.ds !== 'conceptual') {
+                 animator.drawInitialState(currentDataType, currentData);
+            } else {
+                 animator.clearAll(); // Clear board for conceptual animations
+            }
+           
             await animator.runAnimation(result.steps);
         } catch (error) {
             console.error("Algorithm execution failed:", error);
@@ -264,8 +290,6 @@ document.addEventListener('DOMContentLoaded', () => {
     UI.dsSelect.addEventListener('change', handleDataStructureChange);
     UI.algoSelect.addEventListener('change', handleAlgorithmChange);
     UI.runBtn.addEventListener('click', runAlgorithm);
-
-    // Generation buttons
     document.getElementById('generate-random-array-btn').addEventListener('click', () => generateData(false));
     document.getElementById('generate-sorted-array-btn').addEventListener('click', () => generateData(true));
     document.getElementById('generate-tree-btn').addEventListener('click', () => generateData());
@@ -274,8 +298,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Tab functionality for info panel
     document.querySelectorAll('.tab-link').forEach(button => {
         button.addEventListener('click', () => {
-            document.querySelector('.tab-link.active').classList.remove('active');
-            document.querySelector('.tab-content.active').classList.remove('active');
+            document.querySelector('.tab-link.active')?.classList.remove('active');
+            document.querySelector('.tab-content.active')?.classList.remove('active');
             button.classList.add('active');
             document.getElementById(button.dataset.tab).classList.add('active');
         });

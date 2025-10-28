@@ -6,6 +6,7 @@
 # Standard Flask imports and utilities
 from flask import Flask, render_template, jsonify, request
 import random
+import math
 
 # For generating random words for Trie/String structures (if implemented)
 from wonderwords import RandomWord
