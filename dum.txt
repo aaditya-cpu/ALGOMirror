@@ -1,0 +1,2245 @@
+--- DUMPING PROJECT CONTENTS ---
+
+================================================================================
+FILE: ./algorithms/graphs.py
+--------------------------------------------------------------------------------
+# algorithms/graphs.py
+from collections import deque
+import heapq 
+def bfs(graph_data, start_node):
+    """
+    Generates animation steps for Breadth-First Search.
+    Uses a queue to explore level by level.
+    """
+    # Validate that the start node exists in the graph
+    if start_node not in graph_data['adjacency_list']:
+        return [{'action': 'error', 'message': f'Start node "{start_node}" not in graph.'}]
+
+    steps = []
+    queue = deque([start_node])
+    visited = {start_node}
+    
+    # Step: Initial state
+    steps.append({
+        'action': 'enqueue',
+        'node': start_node,
+        'queue_state': list(queue),
+        'message': f'Starting BFS at node {start_node}. Add it to the queue.'
+    })
+
+    while queue:
+        node = queue.popleft()
+        # Step: Dequeue a node to visit it
+        steps.append({
+            'action': 'dequeue',
+            'node': node,
+            'queue_state': list(queue),
+            'message': f'Dequeueing and visiting node {node}.'
+        })
+        
+        # Explore neighbors of the current node
+        for neighbor in sorted(graph_data['adjacency_list'].get(node, [])): # Sorted for consistency
+            # Step: Show which edge is being checked
+            steps.append({
+                'action': 'explore_edge',
+                'from': node,
+                'to': neighbor,
+                'message': f'Exploring edge from {node} to {neighbor}.'
+            })
+            if neighbor not in visited:
+                visited.add(neighbor)
+                queue.append(neighbor)
+                # Step: Enqueue an unvisited neighbor
+                steps.append({
+                    'action': 'enqueue',
+                    'node': neighbor,
+                    'queue_state': list(queue),
+                    'message': f'Node {neighbor} is unvisited. Add to queue.'
+                })
+            else:
+                # Step: Note that the neighbor has already been visited
+                 steps.append({
+                    'action': 'neighbor_visited',
+                    'node': neighbor,
+                    'message': f'Node {neighbor} has already been visited. Skipping.'
+                 })
+    
+    steps.append({'action': 'complete', 'message': 'BFS complete. All reachable nodes visited.'})
+    return steps
+
+def dfs(graph_data, start_node):
+    """
+    Generates animation steps for Depth-First Search (iterative version).
+    Uses a stack to explore as deep as possible before backtracking.
+    """
+    if start_node not in graph_data['adjacency_list']:
+        return [{'action': 'error', 'message': f'Start node "{start_node}" not in graph.'}]
+        
+    steps = []
+    stack = [start_node]
+    visited = set()
+
+    # Step: Initial state
+    steps.append({
+        'action': 'push',
+        'node': start_node,
+        'stack_state': list(stack),
+        'message': f'Starting DFS at node {start_node}. Push it to the stack.'
+    })
+    
+    while stack:
+        node = stack.pop()
+        
+        # Step: Show the node being popped for consideration
+        steps.append({
+            'action': 'pop',
+            'node': node,
+            'stack_state': list(stack),
+            'message': f'Popping node {node} from the stack to visit.'
+        })
+        
+        if node in visited:
+            # Step: If already visited, skip it
+            steps.append({
+                'action': 'skip_visited',
+                'node': node,
+                'message': f'Node {node} already visited. Skipping.'
+            })
+            continue
+
+        visited.add(node)
+        # Step: Mark the node as visited
+        steps.append({
+            'action': 'visit_node',
+            'node': node,
+            'message': f'Visiting node {node} for the first time.'
+        })
+        
+        # Add neighbors to the stack. We sort and reverse so they are processed alphabetically.
+        neighbors = sorted(graph_data['adjacency_list'].get(node, []), reverse=True)
+        for neighbor in neighbors:
+            # Step: Explore edge and push unvisited neighbors to the stack
+            steps.append({
+                'action': 'explore_edge',
+                'from': node,
+                'to': neighbor,
+                'message': f'Checking neighbor {neighbor} of {node}.'
+            })
+            if neighbor not in visited:
+                stack.append(neighbor)
+                steps.append({
+                    'action': 'push',
+                    'node': neighbor,
+                    'stack_state': list(stack),
+                    'message': f'Pushing unvisited neighbor {neighbor} to stack.'
+                })
+
+    steps.append({'action': 'complete', 'message': 'DFS complete. All reachable nodes visited.'})
+    return steps
+def dijkstra_steps(graph_data, start_node, end_node):
+    """Generates animation steps for Dijkstra's Shortest Path algorithm."""
+    adj = graph_data['adjacency_list']
+    if start_node not in adj or end_node not in adj:
+        return [{'action': 'error', 'message': 'Start or end node not in graph.'}]
+
+    steps = []
+    distances = {node: float('inf') for node in adj}
+    predecessors = {node: None for node in adj}
+    distances[start_node] = 0
+    
+    # Priority queue stores (distance, node)
+    pq = [(0, start_node)]
+
+    steps.append({'action': 'init_distances', 'distances': distances, 'message': f'Initializing all distances to infinity, source {start_node} to 0.'})
+
+    while pq:
+        dist, u = heapq.heappop(pq)
+
+        # If we've found a shorter path already, skip
+        if dist > distances[u]:
+            continue
+
+        steps.append({'action': 'visit_node', 'node': u, 'message': f'Visiting node {u}, current shortest distance is {dist}.'})
+
+        for neighbor_data in adj.get(u, []):
+            v = neighbor_data['node']
+            weight = neighbor_data['weight']
+            
+            steps.append({'action': 'explore_edge', 'from': u, 'to': v, 'weight': weight, 'message': f'Exploring edge from {u} to {v} with weight {weight}.'})
+
+            if distances[u] + weight < distances[v]:
+                # Found a shorter path to v
+                distances[v] = distances[u] + weight
+                predecessors[v] = u
+                heapq.heappush(pq, (distances[v], v))
+                steps.append({'action': 'update_distance', 'node': v, 'new_dist': distances[v], 'distances': dict(distances), 'message': f'Found shorter path to {v}! New distance: {distances[v]}.'})
+            else:
+                steps.append({'action': 'skip_update', 'from': u, 'to': v, 'message': f'Path to {v} via {u} is not shorter.'})
+    
+    # Reconstruct and highlight the final path
+    path = []
+    current = end_node
+    while current is not None:
+        path.insert(0, current)
+        current = predecessors[current]
+
+    if path[0] == start_node:
+        steps.append({'action': 'highlight_path', 'path': path, 'distance': distances[end_node], 'message': f'Shortest path found! Total distance: {distances[end_node]}.'})
+    else:
+        steps.append({'action': 'path_not_found', 'end_node': end_node, 'message': f'No path found from {start_node} to {end_node}.'})
+        
+    steps.append({'action': 'complete', 'message': 'Dijkstra\'s algorithm complete.'})
+    return steps
+
+
+
+================================================================================
+FILE: ./algorithms/__init__.py
+--------------------------------------------------------------------------------
+# algorithms/__init__.py
+
+# This file can be empty.
+# Its existence makes the 'algorithms' directory a Python package,
+# which allows for importing modules from it elsewhere in the project.
+
+================================================================================
+FILE: ./algorithms/other_algorithms.py
+--------------------------------------------------------------------------------
+# algorithms/other_algorithms.py
+
+# =================================================================
+# DYNAMIC PROGRAMMING ALGORITHMS
+# =================================================================
+
+def fib_dp_steps(n):
+    """
+    Generates steps to visualize Fibonacci calculation using memoization (Dynamic Programming).
+    This visualization focuses on the recursion tree and the memoization table.
+    """
+    if n > 12: # Limit input to prevent extremely long animations
+        return [{'action': 'error', 'message': 'Input is too large for animation. Please choose a number <= 12.'}]
+
+    steps = []
+    memo = {}
+    call_id_counter = 0
+
+    def _fib_recursive(num, parent_id):
+        nonlocal call_id_counter
+        current_id = call_id_counter
+        call_id_counter += 1
+
+        steps.append({'action': 'call', 'id': current_id, 'parent_id': parent_id, 'n': num, 'message': f'Calling fib({num}).'})
+        steps.append({'action': 'check_memo', 'id': current_id, 'n': num, 'memo_state': dict(memo), 'message': f'Is fib({num}) in memo table?'})
+        
+        if num in memo:
+            steps.append({'action': 'memo_hit', 'id': current_id, 'n': num, 'value': memo[num], 'message': f'Yes! fib({num}) = {memo[num]}. Returning stored value.'})
+            return memo[num]
+        
+        if num <= 1:
+            steps.append({'action': 'base_case', 'id': current_id, 'n': num, 'value': num, 'message': f'Base case reached. fib({num}) = {num}.'})
+            memo[num] = num
+            steps.append({'action': 'store_memo', 'id': current_id, 'n': num, 'value': num, 'memo_state': dict(memo), 'message': f'Storing result fib({num}) = {num} in memo.'})
+            return num
+
+        res1 = _fib_recursive(num - 1, current_id)
+        res2 = _fib_recursive(num - 2, current_id)
+        result = res1 + res2
+        
+        steps.append({'action': 'calculate', 'id': current_id, 'n': num, 'val1': res1, 'val2': res2, 'result': result, 'message': f'Calculating fib({num}) = {res1} + {res2} = {result}.'})
+        memo[num] = result
+        steps.append({'action': 'store_memo', 'id': current_id, 'n': num, 'value': result, 'memo_state': dict(memo), 'message': f'Storing result fib({num}) = {result} in memo.'})
+        return result
+
+    final_result = _fib_recursive(n, parent_id=None)
+    steps.append({'action': 'complete', 'result': final_result, 'message': f'Final result for fib({n}) is {final_result}.'})
+    return steps
+
+def knapsack_01_steps(capacity, items):
+    """
+    Generates steps for the 0/1 Knapsack problem using Dynamic Programming.
+    `items` is a list of dicts: [{'weight': w, 'value': v}]
+    """
+    weights = [item['weight'] for item in items]
+    values = [item['value'] for item in items]
+    steps = []
+    n = len(weights)
+    dp = [[0 for _ in range(capacity + 1)] for _ in range(n + 1)]
+
+    steps.append({'action': 'init_table', 'rows': n + 1, 'cols': capacity + 1, 'weights': weights, 'values': values, 'message': 'Initializing DP table for Knapsack problem.'})
+
+    for i in range(1, n + 1):
+        for w in range(1, capacity + 1):
+            item_index = i - 1
+            item_weight = weights[item_index]
+            item_value = values[item_index]
+
+            steps.append({'action': 'highlight_cell', 'cell': (i, w), 'message': f'Calculating value for item {i} (w:{item_weight}, v:{item_value}) at capacity {w}.'})
+
+            if item_weight > w:
+                dp[i][w] = dp[i-1][w]
+                steps.append({'action': 'copy_above', 'from_cell': (i-1, w), 'to_cell': (i, w), 'value': dp[i][w], 'message': f'Item {i} is too heavy. Value is same as above: {dp[i][w]}.'})
+            else:
+                value_without_item = dp[i-1][w]
+                value_with_item = item_value + dp[i-1][w - item_weight]
+                dp[i][w] = max(value_with_item, value_without_item)
+                
+                steps.append({'action': 'compare_options', 'cell': (i, w), 'option_without': {'cell': (i-1, w), 'value': value_without_item}, 'option_with': {'cell': (i-1, w - item_weight), 'value': value_with_item, 'item_value': item_value}, 'result': dp[i][w], 'message': f'Choose max between excluding ({value_without_item}) and including ({value_with_item}). Max is {dp[i][w]}.'})
+
+    final_value = dp[n][capacity]
+    steps.append({'action': 'complete', 'result': final_value, 'final_cell': (n, capacity), 'message': f'Knapsack calculation complete. Maximum value is {final_value}.'})
+    return steps
+
+# =================================================================
+# GREEDY ALGORITHMS
+# =================================================================
+
+def fractional_knapsack_steps(capacity, items):
+    """
+    Generates steps for the Fractional Knapsack problem using a Greedy approach.
+    `items` is a list of dicts: [{'weight': w, 'value': v, 'id': i}]
+    """
+    steps = []
+    
+    # Step 1: Calculate value-to-weight ratio for each item
+    for item in items:
+        item['ratio'] = item['value'] / item['weight']
+    steps.append({'action': 'calculate_ratios', 'items': list(items), 'message': 'Calculated value-to-weight ratio for each item.'})
+    
+    # Step 2: Sort items by ratio in descending order
+    items.sort(key=lambda x: x['ratio'], reverse=True)
+    steps.append({'action': 'sort_items', 'items': list(items), 'message': 'Sorted items by ratio in descending order.'})
+    
+    total_value = 0
+    current_capacity = capacity
+    
+    for item in items:
+        steps.append({'action': 'select_item', 'item_id': item['id'], 'message': f"Considering item {item['id']} (w:{item['weight']}, v:{item['value']})"})
+        
+        if current_capacity == 0:
+            steps.append({'action': 'knapsack_full', 'item_id': item['id'], 'message': 'Knapsack is full. Cannot add more items.'})
+            break
+            
+        if item['weight'] <= current_capacity:
+            # Take the whole item
+            current_capacity -= item['weight']
+            total_value += item['value']
+            steps.append({'action': 'take_whole', 'item_id': item['id'], 'capacity_left': current_capacity, 'total_value': total_value, 'message': f"Took all of item {item['id']}. Capacity left: {current_capacity:.2f}."})
+        else:
+            # Take a fraction of the item
+            fraction = current_capacity / item['weight']
+            value_taken = item['value'] * fraction
+            total_value += value_taken
+            current_capacity = 0
+            steps.append({'action': 'take_fraction', 'item_id': item['id'], 'fraction': fraction, 'capacity_left': 0, 'total_value': total_value, 'message': f"Took {fraction*100:.1f}% of item {item['id']}. Knapsack is now full."})
+
+    steps.append({'action': 'complete', 'result': total_value, 'message': f'Greedy knapsack complete. Total value is {total_value:.2f}.'})
+    return steps
+
+# =================================================================
+# RECURSIVE ALGORITHMS
+# =================================================================
+
+def hanoi_steps(n_disks):
+    """
+    Generates steps for solving the Tower of Hanoi puzzle.
+    """
+    if n_disks > 6: # Limit for animation sanity
+        return [{'action': 'error', 'message': 'Too many disks for animation. Please choose 6 or fewer.'}]
+        
+    steps = []
+    # Initial state of the towers
+    towers = {'A': list(range(n_disks, 0, -1)), 'B': [], 'C': []}
+
+    def _hanoi_recursive(n, source, target, auxiliary):
+        if n > 0:
+            # Move n-1 disks from source to auxiliary
+            _hanoi_recursive(n - 1, source, auxiliary, target)
+            
+            # Move the nth disk from source to target
+            disk_to_move = towers[source].pop()
+            towers[target].append(disk_to_move)
+            
+            steps.append({
+                'action': 'move_disk',
+                'disk_id': disk_to_move,
+                'from_peg': source,
+                'to_peg': target,
+                'towers_state': {k: list(v) for k, v in towers.items()}, # Deep copy
+                'message': f'Move disk {disk_to_move} from {source} to {target}.'
+            })
+            
+            # Move the n-1 disks from auxiliary to target
+            _hanoi_recursive(n - 1, auxiliary, target, source)
+
+    _hanoi_recursive(n_disks, 'A', 'C', 'B')
+    steps.append({'action': 'complete', 'message': 'Tower of Hanoi puzzle solved!'})
+    return steps
+
+# =================================================================
+# BITWISE ALGORITHMS
+# =================================================================
+
+def bitwise_swap_steps(a, b):
+    """
+    Generates steps to visualize swapping two numbers using XOR.
+    """
+    steps = []
+    
+    # Helper to format binary strings to a consistent length
+    def bin_format(n):
+        return format(n, '08b')
+
+    steps.append({'action': 'initial_state', 'a': a, 'b': b, 'bin_a': bin_format(a), 'bin_b': bin_format(b), 'message': 'Initial values.'})
+    
+    # Step 1: a = a ^ b
+    result1 = a ^ b
+    steps.append({'action': 'xor_operation', 'var1': 'a', 'val1': a, 'bin1': bin_format(a), 'var2': 'b', 'val2': b, 'bin2': bin_format(b), 'result_var': 'a', 'result_val': result1, 'result_bin': bin_format(result1), 'message': f'Step 1: a = a XOR b ({a} ^ {b}) = {result1}'})
+    a = result1
+    
+    # Step 2: b = a ^ b
+    result2 = a ^ b
+    steps.append({'action': 'xor_operation', 'var1': 'a', 'val1': a, 'bin1': bin_format(a), 'var2': 'b', 'val2': b, 'bin2': bin_format(b), 'result_var': 'b', 'result_val': result2, 'result_bin': bin_format(result2), 'message': f'Step 2: b = a XOR b ({a} ^ {b}) = {result2}'})
+    b = result2
+
+    # Step 3: a = a ^ b
+    result3 = a ^ b
+    steps.append({'action': 'xor_operation', 'var1': 'a', 'val1': a, 'bin1': bin_format(a), 'var2': 'b', 'val2': b, 'bin2': bin_format(b), 'result_var': 'a', 'result_val': result3, 'result_bin': bin_format(result3), 'message': f'Step 3: a = a XOR b ({a} ^ {b}) = {result3}'})
+    a = result3
+
+    steps.append({'action': 'final_state', 'a': a, 'b': b, 'bin_a': bin_format(a), 'bin_b': bin_format(b), 'message': 'Swap complete. Final values.'})
+    return steps
+
+def count_set_bits_steps(n):
+    """
+    Generates steps to visualize counting set bits (1s) in a number's binary representation.
+    """
+    steps = []
+    
+    def bin_format(num):
+        return format(num, '08b')
+
+    count = 0
+    current_n = n
+
+    steps.append({'action': 'initial_state', 'n': n, 'bin_n': bin_format(n), 'count': count, 'message': f'Counting set bits for {n}.'})
+
+    while current_n > 0:
+        # Check the last bit
+        last_bit = current_n & 1
+        steps.append({'action': 'check_last_bit', 'n': current_n, 'bin_n': bin_format(current_n), 'last_bit': last_bit, 'message': f'Checking the last bit of {current_n}. It is {last_bit}.'})
+        
+        if last_bit == 1:
+            count += 1
+            steps.append({'action': 'increment_count', 'count': count, 'message': 'Bit is 1. Incrementing count.'})
+
+        # Right shift
+        shifted_n = current_n >> 1
+        steps.append({'action': 'right_shift', 'n_before': current_n, 'bin_before': bin_format(current_n), 'n_after': shifted_n, 'bin_after': bin_format(shifted_n), 'message': f'Right-shifting {current_n} to get {shifted_n}.'})
+        current_n = shifted_n
+
+    steps.append({'action': 'complete', 'result': count, 'n': n, 'message': f'Finished. The number of set bits in {n} is {count}.'})
+    return steps
+
+================================================================================
+FILE: ./algorithms/searching.py
+--------------------------------------------------------------------------------
+# algorithms/searching.py
+
+import math
+
+def linear_search(data, target):
+    """
+    Generates animation steps for Linear Search.
+    Iterates through each element one by one.
+    """
+    steps = []
+    for i, value in enumerate(data):
+        # Step: Highlight the element being compared
+        steps.append({
+            'action': 'compare',
+            'indices': [i],
+            'message': f'Comparing target ({target}) with array[{i}] which is {value}.'
+        })
+        if value == target:
+            # Step: Highlight the found element and terminate
+            steps.append({
+                'action': 'found',
+                'indices': [i],
+                'message': f'Target {target} found at index {i}!'
+            })
+            return steps # Exit early once found
+
+    # Step: If the loop completes, the target was not found
+    steps.append({
+        'action': 'not_found',
+        'message': f'Target {target} not found in the array.'
+    })
+    return steps
+
+def binary_search(data, target):
+    """
+    Generates animation steps for Binary Search.
+    Requires the input array to be sorted.
+    """
+    steps = []
+    
+    # Pre-computation check: Ensure the array is sorted before starting
+    if not all(data[i] <= data[i+1] for i in range(len(data)-1)):
+        steps.append({
+            'action': 'error',
+            'message': 'Error: Binary Search requires a sorted array!'
+        })
+        return steps
+
+    low, high = 0, len(data) - 1
+    
+    while low <= high:
+        mid = (low + high) // 2
+        
+        # Step: Show the current search boundaries (low, high) and the middle point
+        steps.append({
+            'action': 'highlight_pointers',
+            'pointers': {'low': low, 'high': high, 'mid': mid},
+            'message': f'Searching in range [{low}, {high}]. Middle is at index {mid}.'
+        })
+        
+        # Step: Compare the target with the middle element
+        steps.append({
+            'action': 'compare',
+            'indices': [mid],
+            'message': f'Comparing target ({target}) with array[{mid}] which is {data[mid]}.'
+        })
+        
+        if data[mid] == target:
+            # Step: Target found
+            steps.append({
+                'action': 'found',
+                'indices': [mid],
+                'message': f'Target {target} found at index {mid}!'
+            })
+            return steps
+        elif data[mid] < target:
+            # Step: Eliminate the left half
+            steps.append({
+                'action': 'eliminate',
+                'range': (low, mid),
+                'message': f'Target ({target}) > {data[mid]}. Discarding the left half.'
+            })
+            low = mid + 1
+        else:
+            # Step: Eliminate the right half
+            steps.append({
+                'action': 'eliminate',
+                'range': (mid, high),
+                'message': f'Target ({target}) < {data[mid]}. Discarding the right half.'
+            })
+            high = mid - 1
+            
+    # Step: If the loop finishes, the target was not found
+    steps.append({
+        'action': 'not_found',
+        'message': f'Target {target} not found in the array.'
+    })
+    return steps
+
+def jump_search(data, target):
+    """Generates animation steps for Jump Search."""
+    steps = []
+    n = len(data)
+    step = int(math.sqrt(n))
+    prev = 0
+
+    if not all(data[i] <= data[i+1] for i in range(len(data)-1)):
+        steps.append({'action': 'error', 'message': 'Error: Jump Search requires a sorted array!'})
+        return steps
+
+    steps.append({'action': 'message', 'message': f'Block size (step) is √{n} ≈ {step}.'})
+
+    # Jumping ahead in blocks
+    while data[min(step, n) - 1] < target:
+        steps.append({'action': 'compare_block', 'indices': list(range(prev, min(step, n))), 'message': f'Comparing target with end of block [{prev}...{min(step,n)-1}]. {data[min(step, n) - 1]} < {target}. Jumping.'})
+        prev = step
+        step += int(math.sqrt(n))
+        if prev >= n:
+            steps.append({'action': 'not_found', 'message': 'Target is larger than all elements.'})
+            return steps
+
+    steps.append({'action': 'message', 'message': f'Target may be in block [{prev}...{min(step,n)-1}]. Starting linear search.'})
+
+    # Linear search within the identified block
+    for i in range(prev, min(step, n)):
+        steps.append({'action': 'compare', 'indices': [i], 'message': f'Comparing target ({target}) with array[{i}] ({data[i]})'})
+        if data[i] == target:
+            steps.append({'action': 'found', 'indices': [i], 'message': f'Target {target} found at index {i}!'})
+            return steps
+
+    steps.append({'action': 'not_found', 'message': f'Target {target} not found in the array.'})
+    return steps
+
+def interpolation_search(data, target):
+    """Generates animation steps for Interpolation Search."""
+    steps = []
+    low, high = 0, len(data) - 1
+
+    if not all(data[i] <= data[i+1] for i in range(len(data)-1)):
+        steps.append({'action': 'error', 'message': 'Error: Interpolation Search requires a sorted array!'})
+        return steps
+
+    while low <= high and data[low] <= target <= data[high]:
+        if low == high:
+            if data[low] == target:
+                steps.append({'action': 'found', 'indices': [low], 'message': f'Target found at index {low}.'})
+            else:
+                steps.append({'action': 'not_found', 'message': 'Target not found.'})
+            return steps
+
+        # Probing the position with interpolation formula
+        pos = low + int(((float(high - low) / (data[high] - data[low])) * (target - data[low])))
+        steps.append({'action': 'probe', 'index': pos, 'message': f'Probing position {pos} based on data distribution.'})
+        steps.append({'action': 'compare', 'indices': [pos], 'message': f'Comparing target ({target}) with array[{pos}] ({data[pos]})'})
+
+        if data[pos] == target:
+            steps.append({'action': 'found', 'indices': [pos], 'message': f'Target {target} found at index {pos}!'})
+            return steps
+        if data[pos] < target:
+            low = pos + 1
+            steps.append({'action': 'eliminate', 'range': (0, pos), 'message': f'Target is larger. New search range is [{low}, {high}].'})
+        else:
+            high = pos - 1
+            steps.append({'action': 'eliminate', 'range': (pos, len(data)-1), 'message': f'Target is smaller. New search range is [{low}, {high}].'})
+            
+    steps.append({'action': 'not_found', 'message': f'Target {target} not found.'})
+    return steps
+
+================================================================================
+FILE: ./algorithms/sorting.py
+--------------------------------------------------------------------------------
+# algorithms/sorting.py
+
+def bubble_sort(data):
+    """
+    Generates animation steps for Bubble Sort.
+    Compares adjacent elements and swaps them if they are in the wrong order.
+    """
+    steps = []
+    n = len(data)
+    arr = list(data)  # Create a mutable copy to sort in-place
+
+    for i in range(n):
+        swapped = False
+        # Last i elements are already in place
+        for j in range(0, n - i - 1):
+            # Step: Highlight the two elements being compared
+            steps.append({
+                'action': 'compare',
+                'indices': [j, j + 1],
+                'message': f'Comparing {arr[j]} and {arr[j+1]}.'
+            })
+            if arr[j] > arr[j + 1]:
+                # Step: If they need to be swapped, show the swap
+                steps.append({
+                    'action': 'swap',
+                    'indices': [j, j + 1],
+                    'message': f'{arr[j]} > {arr[j+1]}. Swapping.'
+                })
+                # Perform the swap on our local copy
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+                swapped = True
+        
+        # Step: Mark the last element of this pass as sorted
+        steps.append({
+            'action': 'sorted_element',
+            'indices': [n - 1 - i],
+            'message': f'Element {arr[n-1-i]} is now in its final sorted position.'
+        })
+
+        # If no swaps occurred in a pass, the array is sorted
+        if not swapped:
+            # Mark all remaining unsorted elements as sorted
+            for k in range(n - i - 1):
+                 steps.append({'action': 'sorted_element', 'indices': [k]})
+            break
+            
+    steps.append({'action': 'complete', 'message': 'Array is fully sorted.'})
+    return steps
+
+def selection_sort(data):
+    """
+    Generates animation steps for Selection Sort.
+    Finds the minimum element and places it at the beginning.
+    """
+    steps = []
+    n = len(data)
+    arr = list(data) # Create a mutable copy
+
+    for i in range(n):
+        min_idx = i
+        # Step: Highlight the start of the unsorted subarray
+        steps.append({
+            'action': 'highlight_min',
+            'indices': [min_idx],
+            'message': f'Finding the minimum in the unsorted part (from index {i}). Current minimum is {arr[min_idx]}.'
+        })
+        
+        # Find the minimum element in the remaining unsorted array
+        for j in range(i + 1, n):
+            # Step: Compare current element with the current minimum
+            steps.append({
+                'action': 'compare',
+                'indices': [j, min_idx],
+                'message': f'Comparing {arr[j]} with current minimum {arr[min_idx]}.'
+            })
+            if arr[j] < arr[min_idx]:
+                # Step: Found a new minimum
+                old_min_idx = min_idx
+                min_idx = j
+                steps.append({
+                    'action': 'highlight_min',
+                    'indices': [min_idx],
+                    'message': f'Found a new minimum: {arr[min_idx]}.'
+                })
+        
+        # Step: Swap the found minimum element with the first element of the unsorted part
+        steps.append({
+            'action': 'swap',
+            'indices': [i, min_idx],
+            'message': f'Swapping minimum element {arr[min_idx]} with element at index {i} ({arr[i]}).'
+        })
+        arr[i], arr[min_idx] = arr[min_idx], arr[i]
+        
+        # Step: Mark the element at index i as sorted
+        steps.append({
+            'action': 'sorted_element',
+            'indices': [i],
+            'message': f'Element {arr[i]} is now in its final sorted position.'
+        })
+
+    steps.append({'action': 'complete', 'message': 'Array is fully sorted.'})
+    return steps
+
+def insertion_sort(data):
+    """Generates animation steps for Insertion Sort."""
+    steps = []
+    arr = list(data)
+    for i in range(1, len(arr)):
+        key = arr[i]
+        steps.append({'action': 'highlight_key', 'index': i, 'key': key, 'message': f'Selecting {key} as the key to insert.'})
+        j = i - 1
+        while j >= 0 and key < arr[j]:
+            steps.append({'action': 'compare_shift', 'indices': [j, j+1], 'message': f'{key} < {arr[j]}. Shifting {arr[j]} to the right.'})
+            arr[j + 1] = arr[j]
+            steps.append({'action': 'shift_right', 'from': j, 'to': j + 1, 'value': arr[j]})
+            j -= 1
+        arr[j + 1] = key
+        steps.append({'action': 'insert_key', 'index': j + 1, 'key': key, 'message': f'Inserting key {key} at position {j+1}.'})
+
+    steps.append({'action': 'complete', 'message': 'Array is fully sorted.'})
+    return steps
+
+def merge_sort(data):
+    """Generates animation steps for Merge Sort."""
+    steps = []
+    arr = list(data)
+
+    def _merge_sort_recursive(sub_array, offset):
+        if len(sub_array) > 1:
+            mid = len(sub_array) // 2
+            left_half = sub_array[:mid]
+            right_half = sub_array[mid:]
+            
+            steps.append({'action': 'divide', 'range': (offset, offset + len(sub_array) - 1), 'mid': offset + mid, 'message': f'Dividing array at index {offset+mid}.'})
+            
+            _merge_sort_recursive(left_half, offset)
+            _merge_sort_recursive(right_half, offset + mid)
+
+            i = j = k = 0
+            steps.append({'action': 'merge_start', 'range': (offset, offset + len(sub_array) - 1), 'message': f'Merging subarrays.'})
+            
+            # Merging
+            while i < len(left_half) and j < len(right_half):
+                steps.append({'action': 'merge_compare', 'left_index': offset + i, 'right_index': offset + mid + j})
+                if left_half[i] < right_half[j]:
+                    sub_array[k] = left_half[i]
+                    i += 1
+                else:
+                    sub_array[k] = right_half[j]
+                    j += 1
+                k += 1
+
+            while i < len(left_half):
+                sub_array[k] = left_half[i]
+                i += 1
+                k += 1
+            while j < len(right_half):
+                sub_array[k] = right_half[j]
+                j += 1
+                k += 1
+
+            # Update the main array visualization
+            steps.append({'action': 'update_range', 'range_start': offset, 'values': sub_array, 'message': 'Subarray sorted and merged.'})
+
+    _merge_sort_recursive(arr, 0)
+    steps.append({'action': 'complete', 'message': 'Array is fully sorted.'})
+    return steps
+
+def quick_sort(data):
+    """Generates animation steps for Quick Sort."""
+    steps = []
+    arr = list(data)
+
+    def _partition(low, high):
+        pivot = arr[high]
+        steps.append({'action': 'pivot', 'index': high, 'message': f'Choosing {pivot} as pivot for range [{low}, {high}].'})
+        i = low - 1
+        for j in range(low, high):
+            steps.append({'action': 'compare', 'indices': [j, high], 'message': f'Comparing {arr[j]} with pivot {pivot}.'})
+            if arr[j] < pivot:
+                i += 1
+                steps.append({'action': 'swap', 'indices': [i, j], 'message': f'{arr[j]} < {pivot}. Swapping {arr[i]} and {arr[j]}.'})
+                arr[i], arr[j] = arr[j], arr[i]
+        
+        steps.append({'action': 'swap', 'indices': [i + 1, high], 'message': f'Placing pivot. Swapping {arr[i+1]} and {arr[high]}.'})
+        arr[i + 1], arr[high] = arr[high], arr[i + 1]
+        steps.append({'action': 'sorted_element', 'indices': [i + 1]})
+        return i + 1
+
+    def _quick_sort_recursive(low, high):
+        if low < high:
+            pi = _partition(low, high)
+            _quick_sort_recursive(low, pi - 1)
+            _quick_sort_recursive(pi + 1, high)
+
+    _quick_sort_recursive(0, len(arr) - 1)
+    steps.append({'action': 'complete', 'message': 'Array is fully sorted.'})
+    return steps
+
+================================================================================
+FILE: ./algorithms/trees.py
+--------------------------------------------------------------------------------
+# algorithms/trees.py
+
+def bst_build_steps(values):
+    """
+    Generates animation steps to build a Binary Search Tree from a list of values.
+    The frontend will be responsible for calculating node positions. This function
+    only provides the logical steps of comparison and insertion.
+    """
+    if not values:
+        return [{'action': 'error', 'message': 'Cannot build a tree from an empty list.'}]
+    
+    steps = []
+    # Use a dictionary to simulate the tree structure on the backend to track connections
+    # Format: {node_value: {'left': child_value, 'right': child_value}}
+    tree = {} 
+    
+    # First value becomes the root
+    root_val = values[0]
+    steps.append({
+        'action': 'insert',
+        'value': root_val,
+        'parent': None,
+        'direction': 'root',
+        'message': f'Tree is empty. Inserting {root_val} as the root.'
+    })
+    tree[root_val] = {'left': None, 'right': None}
+
+    # Insert remaining values
+    for val in values[1:]:
+        current = root_val
+        parent = None
+        
+        while current is not None:
+            parent = current
+            # Step: Compare the new value with the current node
+            steps.append({
+                'action': 'compare',
+                'value': current,
+                'newValue': val,
+                'message': f'Comparing new value {val} with node {current}.'
+            })
+            if val < current:
+                # Go left
+                steps.append({'action': 'traverse', 'from': parent, 'direction': 'left', 'message': f'{val} < {current}. Moving left.'})
+                current = tree[current]['left']
+            elif val > current:
+                # Go right
+                steps.append({'action': 'traverse', 'from': parent, 'direction': 'right', 'message': f'{val} > {current}. Moving right.'})
+                current = tree[current]['right']
+            else:
+                # Value already exists
+                steps.append({'action': 'duplicate', 'value': val, 'message': f'Value {val} already exists. No insertion.'})
+                parent = None # Signal that no insertion should happen
+                break
+        
+        if parent is not None:
+            direction = 'left' if val < parent else 'right'
+            # Step: Insert the new node
+            steps.append({
+                'action': 'insert',
+                'value': val,
+                'parent': parent,
+                'direction': direction,
+                'message': f'Found empty spot. Inserting {val} as the {direction} child of {parent}.'
+            })
+            # Update our backend tree model
+            tree[val] = {'left': None, 'right': None}
+            if direction == 'left':
+                tree[parent]['left'] = val
+            else:
+                tree[parent]['right'] = val
+                
+    steps.append({'action': 'complete', 'message': 'BST build process complete.'})
+    return steps
+
+================================================================================
+FILE: ./app.py
+--------------------------------------------------------------------------------
+# app.py (FINAL, CLEANED, AND CORRECTED)
+
+import random
+import math
+from flask import Flask, render_template, jsonify, request
+
+# Import all necessary algorithm functions
+from algorithms.searching import linear_search, binary_search, jump_search, interpolation_search
+from algorithms.sorting import bubble_sort, selection_sort, insertion_sort, merge_sort, quick_sort
+from algorithms.trees import bst_build_steps
+from algorithms.graphs import bfs, dfs, dijkstra_steps
+from algorithms.other_algorithms import fib_dp_steps
+
+# Import the validated content dictionaries
+from content import ALGORITHM_CONTENT, DATA_STRUCTURE_INFO
+
+app = Flask(__name__)
+
+# This dictionary maps algorithm keys to their implementation functions
+ALGORITHM_FUNCTIONS = {
+    'linear_search': linear_search, 'binary_search': binary_search, 'jump_search': jump_search, 'interpolation_search': interpolation_search,
+    'bubble_sort': bubble_sort, 'selection_sort': selection_sort, 'insertion_sort': insertion_sort, 'merge_sort': merge_sort, 'quick_sort': quick_sort,
+    'bst_build': bst_build_steps,
+    'bfs': bfs, 'dfs': dfs, 'dijkstra': dijkstra_steps,
+    'fib_dp': fib_dp_steps,
+}
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/get_content')
+def get_content():
+    return jsonify({"algorithms": ALGORITHM_CONTENT, "data_structures": DATA_STRUCTURE_INFO})
+
+@app.route('/generate_data', methods=['POST'])
+def generate_data():
+    data = request.get_json()
+    size = int(data.get('size', 12))
+    dtype = data.get('dtype', 'array')
+    if dtype == 'array':
+        is_sorted = data.get('sorted', False)
+        arr = [random.randint(1, 100) for _ in range(size)]
+        if is_sorted: arr.sort()
+        return jsonify(arr)
+    elif dtype == 'tree':
+        return jsonify(random.sample(range(1, 100), k=min(size, 99)))
+    elif dtype == 'graph':
+        num_nodes = min(size, 26)
+        nodes, node_ids = {}, [chr(65 + i) for i in range(num_nodes)]
+        width, height, center_x, center_y = 700, 350, 350, 175
+        radius = min(center_x, center_y) * 0.8
+        for i, node_id in enumerate(node_ids):
+            angle = (2 * math.pi / num_nodes) * i
+            nodes[node_id] = {"x": center_x + radius * math.cos(angle), "y": center_y + radius * math.sin(angle)}
+        adj_list = {node_id: [] for node_id in node_ids}
+        num_edges = int(num_nodes * 1.5)
+        # Use a set to prevent trying to add duplicate edges
+        existing_edges = set()
+        for _ in range(num_edges * 5): # More attempts to connect graph
+             u, v = random.sample(node_ids, 2)
+             edge = tuple(sorted((u,v)))
+             if u != v and edge not in existing_edges:
+                weight = random.randint(1, 10)
+                adj_list[u].append({"node": v, "weight": weight})
+                adj_list[v].append({"node": u, "weight": weight})
+                existing_edges.add(edge)
+        return jsonify({"nodes": nodes, "adjacency_list": adj_list})
+    return jsonify([])
+
+@app.route('/run_algorithm', methods=['POST'])
+def run_algorithm():
+    data = request.get_json()
+    key = data.get('algorithm')
+    if not key or key not in ALGORITHM_FUNCTIONS:
+        return jsonify({'error': f"Algorithm '{key}' not found or is not implemented."}), 400
+    
+    func = ALGORITHM_FUNCTIONS[key]
+    try:
+        # Use the robust 'category' and 'ds' keys from content.py for routing
+        algo_info = ALGORITHM_CONTENT[key]
+        if algo_info['category'] == 'Searching':
+            return jsonify({'steps': func(data.get('input_data'), int(data.get('target')))})
+        elif key == 'dijkstra':
+            return jsonify({'steps': func(data.get('input_data'), data.get('start_node'), data.get('end_node'))})
+        elif algo_info['category'] in ['Graph Traversal', 'Shortest Path']:
+            return jsonify({'steps': func(data.get('input_data'), data.get('start_node'))})
+        elif algo_info['ds'] == 'conceptual':
+            return jsonify({'steps': func(int(data.get('n', 5)))})
+        else: # Covers all other cases like sorting, bst_build
+            return jsonify({'steps': func(data.get('input_data'))})
+    except Exception as e:
+        print(f"ERROR executing {key}: {e}")
+        return jsonify({'error': str(e)}), 500
+
+if __name__ == '__main__': jsonify({'error': 'Server error during algorithm execution.'}), 500
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+================================================================================
+FILE: ./content.py
+--------------------------------------------------------------------------------
+# content.py (FINAL, COMPLETE, AND VALIDATED)
+
+ALGORITHM_CONTENT = {
+    # 1. SEARCHING ALGORITHMS
+    "linear_search": {
+        "name": "Linear Search", "category": "Searching", "ds": "array",
+        "idea": "Check each element one by one from the beginning.",
+        "pseudocode": """function linearSearch(array, target):
+    for i from 0 to length(array) - 1:
+        if array[i] == target:
+            return i
+    return -1""",
+        "complexity": { "time_best": "O(1)", "time_avg": "O(n)", "time_worst": "O(n)", "space": "O(1)" }
+    },
+    "binary_search": {
+        "name": "Binary Search", "category": "Searching", "ds": "array",
+        "idea": "Efficiently find an item in a sorted array by repeatedly dividing the search interval in half.",
+        "pseudocode": """function binarySearch(array, target):
+    low = 0
+    high = length(array) - 1
+    while low <= high:
+        mid = (low + high) // 2
+        if array[mid] == target:
+            return mid
+        else if array[mid] < target:
+            low = mid + 1
+        else:
+            high = mid - 1
+    return -1""",
+        "complexity": { "time_best": "O(1)", "time_avg": "O(log n)", "time_worst": "O(log n)", "space": "O(1)" }
+    },
+    "jump_search": {
+        "name": "Jump Search", "category": "Searching", "ds": "array",
+        "idea": "Hop through a sorted array in fixed steps, then perform a linear search in the identified block.",
+        "pseudocode": """function jumpSearch(array, target):
+    step = √(length(array))
+    prev = 0
+    while array[min(step, length(array)) - 1] < target:
+        prev = step
+        step += √(length(array))
+        if prev >= length(array):
+            return -1
+    for i from prev to min(step, length(array)):
+        if array[i] == target:
+            return i
+    return -1""",
+        "complexity": { "time_best": "O(1)", "time_avg": "O(√n)", "time_worst": "O(√n)", "space": "O(1)" }
+    },
+    "interpolation_search": {
+        "name": "Interpolation Search", "category": "Searching", "ds": "array",
+        "idea": "An improvement over Binary Search for uniformly distributed data by probing positions.",
+        "pseudocode": """function interpolationSearch(array, target):
+    low = 0
+    high = length(array) - 1
+    while low <= high and target >= array[low] and target <= array[high]:
+        pos = low + ((target - array[low]) * (high - low)) / (array[high] - array[low])
+        if array[pos] == target:
+            return pos
+        if array[pos] < target:
+            low = pos + 1
+        else:
+            high = pos - 1
+    return -1""",
+        "complexity": { "time_best": "O(1)", "time_avg": "O(log log n)", "time_worst": "O(n)", "space": "O(1)" }
+    },
+    
+    # 2. SORTING ALGORITHMS
+    "bubble_sort": {
+        "name": "Bubble Sort", "category": "Sorting", "ds": "array",
+        "idea": "Repeatedly steps through the list, compares adjacent elements and swaps them if they are in the wrong order.",
+        "pseudocode": """function bubbleSort(array):
+    for i from 0 to length(array)-1:
+        for j from 0 to length(array)-i-1:
+            if array[j] > array[j+1]:
+                swap(array[j], array[j+1])""",
+        "complexity": { "time_best": "O(n)", "time_avg": "O(n^2)", "time_worst": "O(n^2)", "space": "O(1)" }
+    },
+    "selection_sort": {
+        "name": "Selection Sort", "category": "Sorting", "ds": "array",
+        "idea": "Repeatedly finds the minimum element from the unsorted part and puts it at the beginning.",
+        "pseudocode": """function selectionSort(array):
+    for i from 0 to length(array)-1:
+        minIndex = i
+        for j from i+1 to length(array):
+            if array[j] < array[minIndex]:
+                minIndex = j
+        swap(array[i], array[minIndex])""",
+        "complexity": { "time_best": "O(n^2)", "time_avg": "O(n^2)", "time_worst": "O(n^2)", "space": "O(1)" }
+    },
+    "insertion_sort": {
+        "name": "Insertion Sort", "category": "Sorting", "ds": "array",
+        "idea": "Builds the final sorted array one item at a time by inserting each element into its proper place.",
+        "pseudocode": """function insertionSort(array):
+    for i from 1 to length(array)-1:
+        key = array[i]
+        j = i - 1
+        while j >= 0 and array[j] > key:
+            array[j+1] = array[j]
+            j = j - 1
+        array[j+1] = key""",
+        "complexity": { "time_best": "O(n)", "time_avg": "O(n^2)", "time_worst": "O(n^2)", "space": "O(1)" }
+    },
+    "merge_sort": {
+        "name": "Merge Sort", "category": "Sorting", "ds": "array",
+        "idea": "A 'Divide and Conquer' algorithm. It divides the array into halves, recursively sorts them, and then merges them.",
+        "pseudocode": """function mergeSort(array):
+    if length(array) > 1:
+        mid = length(array)//2
+        left = array[0:mid]
+        right = array[mid:]
+
+        mergeSort(left)
+        mergeSort(right)
+
+        merge(array, left, right)""",
+        "complexity": { "time_best": "O(n log n)", "time_avg": "O(n log n)", "time_worst": "O(n log n)", "space": "O(n)" }
+    },
+    "quick_sort": {
+        "name": "Quick Sort", "category": "Sorting", "ds": "array",
+        "idea": "A 'Divide and Conquer' algorithm that picks a 'pivot' and partitions the array around it.",
+        "pseudocode": """function quickSort(array, low, high):
+    if low < high:
+        pivotIndex = partition(array, low, high)
+        quickSort(array, low, pivotIndex - 1)
+        quickSort(array, pivotIndex + 1, high)""",
+        "complexity": { "time_best": "O(n log n)", "time_avg": "O(n log n)", "time_worst": "O(n^2)", "space": "O(log n)" }
+    },
+    
+    # 3. GRAPH ALGORITHMS
+    "bfs": {
+        "name": "Breadth-First Search (BFS)", "category": "Graph Traversal", "ds": "graph",
+        "idea": "Explore a graph level by level using a queue.",
+        "pseudocode": """function BFS(graph, start):
+    queue = [start]
+    visited = {start}
+    while queue not empty:
+        node = dequeue(queue)
+        for neighbor in graph[node]:
+            if neighbor not in visited:
+                visited.add(neighbor)
+                enqueue(queue, neighbor)""",
+        "complexity": { "time_best": "O(V+E)", "time_avg": "O(V+E)", "time_worst": "O(V+E)", "space": "O(V)" }
+    },
+    "dfs": {
+        "name": "Depth-First Search (DFS)", "category": "Graph Traversal", "ds": "graph",
+        "idea": "Explore a graph by going as deep as possible along each branch before backtracking, using a stack.",
+        "pseudocode": """function DFS(graph, start, visited):
+    visited.add(start)
+    for neighbor in graph[start]:
+        if neighbor not in visited:
+            DFS(graph, neighbor, visited)""",
+        "complexity": { "time_best": "O(V+E)", "time_avg": "O(V+E)", "time_worst": "O(V+E)", "space": "O(V)" }
+    },
+    "dijkstra": {
+        "name": "Dijkstra's Algorithm", "category": "Shortest Path", "ds": "graph",
+        "idea": "Finds the shortest path in a weighted graph with non-negative edge weights.",
+        "pseudocode": """function dijkstra(graph, source):
+    dist[source] = 0
+    for vertex in graph:
+        dist[vertex] = ∞
+    pq = priorityQueue()
+    pq.push((0, source))
+
+    while pq not empty:
+        (distance, u) = pq.pop()
+        for (v, weight) in graph[u]:
+            if dist[u] + weight < dist[v]:
+                dist[v] = dist[u] + weight
+                pq.push((dist[v], v))""",
+        "complexity": { "time_best": "O(E + V log V)", "time_avg": "O(E + V log V)", "time_worst": "O(E + V log V)", "space": "O(V)" }
+    },
+
+    # 4. TREE ALGORITHMS
+    "bst_build": {
+        "name": "BST Build", "category": "Tree Operations", "ds": "tree",
+        "idea": "Build a Binary Search Tree by inserting elements one by one.",
+        "pseudocode": """function insert(node, value):
+    if value < node.value:
+        if node.left is null:
+            node.left = new Node(value)
+        else:
+            insert(node.left, value)
+    else:
+        if node.right is null:
+            node.right = new Node(value)
+        else:
+            insert(node.right, value)""",
+        "complexity": { "time_best": "O(n log n)", "time_avg": "O(n log n)", "time_worst": "O(n^2)", "space": "O(n)" }
+    },
+
+    # 5. CONCEPTUAL ALGORITHMS
+    "fib_dp": {
+        "name": "Fibonacci (DP)", "category": "Dynamic Programming", "ds": "conceptual",
+        "idea": "Calculates Fibonacci numbers efficiently by storing results of subproblems (memoization).",
+        "pseudocode": """function fib(n, memo):
+    if n in memo:
+        return memo[n]
+    if n <= 1:
+        return n
+    memo[n] = fib(n-1, memo) + fib(n-2, memo)
+    return memo[n]""",
+        "complexity": { "time_best": "O(n)", "time_avg": "O(n)", "time_worst": "O(n)", "space": "O(n)" }
+    }
+}
+
+DATA_STRUCTURE_INFO = {
+    "array": { "name": "Array", "description": "A collection of items stored at contiguous memory locations." },
+    "tree": { "name": "Tree (BST)", "description": "A hierarchical data structure with a root node and child nodes." },
+    "graph": { "name": "Graph", "description": "A collection of nodes (vertices) connected by edges." },
+    "conceptual": { "name": "Conceptual", "description": "Algorithms that demonstrate a concept like recursion or dynamic programming." }
+}
+
+================================================================================
+FILE: ./static/css/style.css
+--------------------------------------------------------------------------------
+/* static/css/style.css */
+
+/* =================================================================
+   1. ROOT VARIABLES & GLOBAL STYLES
+   ================================================================= */
+:root {
+    --bg-color: #1a1a2e;
+    --panel-bg: #16213e;
+    --primary-color: #0f3460;
+    --accent-color: #e94560;
+    --text-color: #dcdcdc;
+    --highlight-compare: #f9d923; /* Yellow */
+    --highlight-found: #4caf50;    /* Green */
+    --highlight-sorted: #5372f0;  /* Blue */
+    --highlight-min: #00bcd4;     /* Cyan */
+    --highlight-error: #f44336;  /* Red */
+    --font-main: 'Roboto', sans-serif;
+    --font-code: 'Fira Code', monospace;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: var(--font-main);
+    margin: 0;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+header h1 {
+    font-family: var(--font-code);
+    color: var(--accent-color);
+    margin: 0;
+}
+
+/* =================================================================
+   2. LAYOUT & PANELS
+   ================================================================= */
+.container {
+    display: flex;
+    gap: 20px;
+    height: 85vh;
+}
+
+.panel {
+    background-color: var(--panel-bg);
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.controls-panel { flex: 1; min-width: 280px; }
+.visualization-panel { flex: 3; }
+.info-panel { flex: 1.5; min-width: 320px; }
+
+/* =================================================================
+   3. CONTROLS PANEL
+   ================================================================= */
+.control-group { margin-bottom: 15px; }
+.control-group label { display: block; margin-bottom: 5px; font-size: 0.9em; }
+
+select, input[type="number"], input[type="text"] {
+    width: 100%;
+    padding: 8px;
+    background-color: var(--primary-color);
+    border: 1px solid var(--accent-color);
+    border-radius: 4px;
+    color: var(--text-color);
+    font-family: var(--font-main);
+    box-sizing: border-box;
+}
+
+button {
+    width: 100%;
+    padding: 10px;
+    background-color: var(--accent-color);
+    border: none;
+    border-radius: 4px;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    margin-bottom: 10px;
+}
+button:hover:not(:disabled) { background-color: #ff6b81; }
+button:disabled { background-color: #555; cursor: not-allowed; }
+hr { border: 1px solid var(--primary-color); margin: 20px 0; }
+
+/* =================================================================
+   4. VISUALIZATION PANEL
+   ================================================================= */
+#visualization-title { text-align: center; margin-top: 0; }
+#visualization-container {
+    flex-grow: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+    padding: 10px;
+    position: relative;
+    border: 1px dashed var(--primary-color);
+    border-radius: 4px;
+    min-height: 200px;
+}
+#status-log {
+    padding: 10px;
+    margin-top: 10px;
+    background-color: rgba(0,0,0,0.3);
+    border-radius: 4px;
+    text-align: center;
+    font-family: var(--font-code);
+    min-height: 2.5em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+#status-log p { margin: 0; }
+
+/* --- 4.1 Array Styles --- */
+.array-element {
+    width: 50px;
+    height: 50px;
+    background-color: var(--primary-color);
+    border: 2px solid var(--accent-color);
+    color: var(--text-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.2em;
+    font-weight: bold;
+    border-radius: 4px;
+    transition: all 0.3s ease-in-out;
+    position: relative;
+}
+.array-element.comparing { border-color: var(--highlight-compare); transform: translateY(-10px); }
+.array-element.found { background-color: var(--highlight-found); border-color: var(--highlight-found); }
+.array-element.sorted { background-color: var(--highlight-sorted); border-color: var(--highlight-sorted); }
+.array-element.min-element { border-color: var(--highlight-min); }
+.array-element.faded { opacity: 0.3; }
+
+.pointer {
+    position: absolute;
+    bottom: -30px;
+    font-size: 0.8em;
+    font-family: var(--font-code);
+    color: var(--highlight-pointer);
+    transition: left 0.3s ease-in-out;
+    text-align: center;
+}
+.pointer-label { font-weight: bold; }
+
+/* --- 4.2 SVG (Tree/Graph) Styles --- */
+#visualization-container svg { width: 100%; height: 100%; overflow: visible; }
+
+.node circle {
+    stroke: var(--accent-color);
+    stroke-width: 3px;
+    fill: var(--primary-color);
+    transition: all 0.3s ease;
+}
+.node text {
+    fill: var(--text-color);
+    font-family: var(--font-code);
+    font-size: 16px;
+    text-anchor: middle;
+    dominant-baseline: middle;
+    pointer-events: none;
+}
+.link {
+    stroke: var(--primary-color);
+    stroke-width: 2px;
+    transition: all 0.3s ease;
+}
+/* Node/Link States */
+.node.comparing circle, .node.visiting circle { stroke: var(--highlight-compare); }
+.node.visited circle { fill: var(--highlight-sorted); }
+.node.found circle { fill: var(--highlight-found); stroke: var(--highlight-found); }
+.link.exploring { stroke: var(--highlight-compare); stroke-width: 4px; }
+.link.visited { stroke: var(--highlight-sorted); }
+
+/* --- 4.3 Auxiliary Visualization Styles --- */
+#aux-visualization-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+    padding: 10px;
+    min-height: 60px;
+    flex-wrap: wrap;
+}
+.aux-title { width: 100%; text-align: center; font-family: var(--font-code); margin-bottom: 5px; }
+
+.queue-element, .stack-element {
+    background-color: var(--primary-color);
+    border: 1px solid var(--highlight-min);
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-family: var(--font-code);
+}
+.queue-element.processing, .stack-element.processing {
+    border-color: var(--highlight-compare);
+    transform: scale(1.1);
+}
+
+/* DP Table */
+.dp-table {
+    border-collapse: collapse;
+    margin: 10px auto;
+    font-family: var(--font-code);
+}
+.dp-table th, .dp-table td {
+    border: 1px solid var(--primary-color);
+    padding: 8px;
+    text-align: center;
+    min-width: 40px;
+}
+.dp-table th { background-color: var(--primary-color); }
+.dp-table td.dp-highlight { background-color: var(--highlight-compare); color: var(--bg-color); }
+.dp-table td.dp-referenced { box-shadow: 0 0 10px var(--highlight-min) inset; }
+
+/* =================================================================
+   5. INFO PANEL
+   ================================================================= */
+#info-title { margin-top: 0; }
+.info-tabs { display: flex; margin-bottom: 15px; }
+.tab-link {
+    background-color: transparent;
+    border: 1px solid var(--accent-color);
+    color: var(--accent-color);
+    padding: 8px 12px;
+    cursor: pointer;
+    margin-right: 5px;
+    border-radius: 4px 4px 0 0;
+    width: auto;
+    margin-bottom: 0;
+}
+.tab-link.active { background-color: var(--accent-color); color: white; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+pre {
+    background-color: rgba(0,0,0,0.3);
+    padding: 15px;
+    border-radius: 4px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-family: var(--font-code);
+}
+ul { padding-left: 20px; }
+li { margin-bottom: 5px; }
+
+/* --- Dijkstra Specific Styles --- */
+.distance-label {
+    fill: var(--text-color);
+    font-size: 14px;
+    font-family: var(--font-code);
+    text-anchor: middle;
+    transition: all 0.3s ease;
+}
+.distance-label.updated {
+    fill: var(--highlight-compare);
+    font-weight: bold;
+    transform: scale(1.2);
+}
+.node.path-node circle {
+    fill: var(--highlight-found);
+    stroke: var(--highlight-found);
+}
+.link.path-link {
+    stroke: var(--highlight-found);
+    stroke-width: 5px;
+}
+
+================================================================================
+FILE: ./static/js/animator.js
+--------------------------------------------------------------------------------
+// static/js/animator.js
+
+class Animator {
+    constructor(containerId, auxContainerId, logId, speedSliderId) {
+        this.container = document.getElementById(containerId);
+        this.auxContainer = document.getElementById(auxContainerId);
+        this.log = document.getElementById(logId);
+        this.speedSlider = document.getElementById(speedSliderId);
+
+        // State for complex visualizations
+        this.dataType = null;
+        this.nodeElements = {};
+        this.linkElements = {};
+        this.distanceLabels = {};
+        this.treeData = {};
+    }
+
+    // =================================================================
+    // 1. CORE ANIMATION & UTILITY METHODS
+    // =================================================================
+
+    getAnimationSpeed() {
+        const max = parseInt(this.speedSlider.max);
+        const min = parseInt(this.speedSlider.min);
+        const value = parseInt(this.speedSlider.value);
+        return (max + min) - value;
+    }
+
+    sleep() {
+        return new Promise(resolve => setTimeout(resolve, this.getAnimationSpeed()));
+    }
+
+    updateLog(message) {
+        this.log.innerHTML = `<p>${message}</p>`;
+    }
+
+    clearAll() {
+        this.container.innerHTML = '';
+        this.auxContainer.innerHTML = '';
+        this.nodeElements = {};
+        this.linkElements = {};
+        this.distanceLabels = {};
+        this.treeData = {};
+    }
+
+    createSvgElement(tag, attrs) {
+        const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+        for (const key in attrs) {
+            el.setAttribute(key, attrs[key]);
+        }
+        return el;
+    }
+
+    // =================================================================
+    // 2. INITIAL STATE DRAWING
+    // =================================================================
+
+    drawInitialState(dataType, data) {
+        this.clearAll();
+        this.dataType = dataType;
+        switch (dataType) {
+            case 'array':
+                this.drawArray(data);
+                break;
+            case 'graph':
+                this.drawGraph(data);
+                break;
+            case 'tree':
+                this.container.innerHTML = `<svg id="svg-vis"></svg>`;
+                break;
+            // Conceptual algorithms may not need an initial drawing
+        }
+    }
+
+    drawArray(data) {
+        data.forEach((value, index) => {
+            const element = document.createElement('div');
+            element.classList.add('array-element');
+            element.id = `el-${index}`;
+            element.textContent = value;
+            this.container.appendChild(element);
+        });
+    }
+
+    drawGraph(graphData) {
+        this.container.innerHTML = `<svg id="svg-vis"></svg>`;
+        const svg = this.container.querySelector('#svg-vis');
+        const { nodes, adjacency_list } = graphData;
+
+        // Dynamically calculate viewBox to fit the graph
+        const padding = 50;
+        const coords = Object.values(nodes);
+        const minX = Math.min(...coords.map(n => n.x));
+        const maxX = Math.max(...coords.map(n => n.x));
+        const minY = Math.min(...coords.map(n => n.y));
+        const maxY = Math.max(...coords.map(n => n.y));
+        svg.setAttribute('viewBox', `${minX - padding} ${minY - padding} ${maxX - minX + 2 * padding} ${maxY - minY + 2 * padding}`);
+
+        const edgeGroup = this.createSvgElement('g'); // Group for edges
+        const nodeGroup = this.createSvgElement('g'); // Group for nodes
+        svg.appendChild(edgeGroup);
+        svg.appendChild(nodeGroup);
+
+        // Draw links and their weights
+        for (const source in adjacency_list) {
+            for (const neighbor of adjacency_list[source]) {
+                const target = neighbor.node;
+                const weight = neighbor.weight;
+                if (source < target) {
+                    const sourceNode = nodes[source];
+                    const targetNode = nodes[target];
+                    
+                    const line = this.createSvgElement('line', { x1: sourceNode.x, y1: sourceNode.y, x2: targetNode.x, y2: targetNode.y, class: 'link' });
+                    edgeGroup.appendChild(line);
+                    this.linkElements[`${source}-${target}`] = this.linkElements[`${target}-${source}`] = line;
+
+                    // Add weight label
+                    const text = this.createSvgElement('text', {
+                        x: (sourceNode.x + targetNode.x) / 2,
+                        y: (sourceNode.y + targetNode.y) / 2 - 5,
+                        class: 'link-weight'
+                    });
+                    text.textContent = weight;
+                    edgeGroup.appendChild(text);
+                }
+            }
+        }
+        
+        // Draw nodes, labels, and distance placeholders
+        for (const id in nodes) {
+            const { x, y } = nodes[id];
+            const group = this.createSvgElement('g', { class: 'node', id: `node-${id}` });
+            const circle = this.createSvgElement('circle', { cx: x, cy: y, r: 20 });
+            const text = this.createSvgElement('text', { x: x, y: y });
+            text.textContent = id;
+            
+            const distLabel = this.createSvgElement('text', { x: x, y: y + 32, class: 'distance-label' });
+            distLabel.textContent = '∞';
+            
+            group.appendChild(circle);
+            group.appendChild(text);
+            group.appendChild(distLabel);
+            nodeGroup.appendChild(group);
+            this.nodeElements[id] = group;
+            this.distanceLabels[id] = distLabel;
+        }
+    }
+
+    // =================================================================
+    // 3. SPECIALIZED DRAWING (BST, DP TABLE)
+    // =================================================================
+
+    drawTreeNode(value, parentValue, direction) {
+        const svg = this.container.querySelector('#svg-vis');
+        if (!svg) return;
+        
+        if (!svg.viewBox.baseVal.width) {
+             svg.setAttribute('viewBox', `0 0 ${this.container.clientWidth} ${this.container.clientHeight}`);
+        }
+
+        let x, y, depth;
+        const width = svg.viewBox.baseVal.width;
+        const y_spacing = 60;
+        const initial_x_offset = width / 4;
+
+        if (direction === 'root') {
+            depth = 0;
+            x = width / 2;
+            y = 50;
+        } else {
+            const parentNode = this.treeData[parentValue];
+            if (!parentNode) return;
+            depth = parentNode.depth + 1;
+            const x_offset = initial_x_offset / Math.pow(1.8, depth); // Fine-tuned offset
+            x = (direction === 'left') ? parentNode.x - x_offset : parentNode.x + x_offset;
+            y = parentNode.y + y_spacing;
+        }
+
+        this.treeData[value] = { value, parent: parentValue, x, y, depth };
+
+        if (parentValue !== null) {
+            const parentNode = this.treeData[parentValue];
+            const linkId = `${parentValue}-${value}`;
+            const line = this.createSvgElement('line', { x1: parentNode.x, y1: parentNode.y, x2: x, y2: y, class: 'link' });
+            svg.insertBefore(line, svg.firstChild);
+            this.linkElements[linkId] = line;
+        }
+
+        const group = this.createSvgElement('g', { class: 'node', id: `node-${value}` });
+        const circle = this.createSvgElement('circle', { cx: x, cy: y, r: 20 });
+        const text = this.createSvgElement('text', { x: x, y: y });
+        text.textContent = value;
+
+        group.appendChild(circle);
+        group.appendChild(text);
+        svg.appendChild(group);
+        this.nodeElements[value] = group;
+    }
+
+    drawDPTable(rows, cols, weights, values) {
+        this.auxContainer.innerHTML = '';
+        const table = document.createElement('table');
+        table.classList.add('dp-table');
+        
+        // Header Row
+        const thead = table.createTHead();
+        const headerRow = thead.insertRow();
+        headerRow.insertCell().textContent = 'Item';
+        headerRow.insertCell().textContent = 'W/V';
+        for (let w = 0; w < cols; w++) {
+            headerRow.insertCell().textContent = w;
+        }
+
+        // Body Rows
+        const tbody = table.createTBody();
+        for (let i = 0; i < rows; i++) {
+            const row = tbody.insertRow();
+            if (i > 0) {
+                row.insertCell().textContent = `i=${i}`;
+                row.insertCell().textContent = `${weights[i-1]}/${values[i-1]}`;
+            } else {
+                row.insertCell().textContent = 'i=0';
+                row.insertCell().textContent = '-';
+            }
+            for (let w = 0; w < cols; w++) {
+                const cell = row.insertCell();
+                cell.id = `cell-${i}-${w}`;
+                cell.textContent = '0';
+            }
+        }
+        this.auxContainer.appendChild(table);
+    }
+
+    // =================================================================
+    // 4. THE MAIN ANIMATION LOOP
+    // =================================================================
+
+    async runAnimation(steps) {
+        for (const step of steps) {
+            // Reset transient highlights from previous step
+            document.querySelectorAll('.comparing, .min-element, .exploring, .visiting, .dp-highlight, .dp-referenced, .updated, .faded')
+                .forEach(el => el.classList.remove('comparing', 'min-element', 'exploring', 'visiting', 'dp-highlight', 'dp-referenced', 'updated', 'faded'));
+            
+            this.updateLog(step.message);
+
+            // --- Main Action Switch ---
+            switch (step.action) {
+                // Common Actions
+                case 'error': this.updateLog(`Error: ${step.message}`); return;
+                case 'complete': break;
+
+                // Array Actions
+                case 'compare': step.indices.forEach(i => document.getElementById(`el-${i}`)?.classList.add('comparing')); break;
+                case 'swap':
+                    const el1 = document.getElementById(`el-${step.indices[0]}`);
+                    const el2 = document.getElementById(`el-${step.indices[1]}`);
+                    if (el1 && el2) {
+                        el1.classList.add('comparing'); el2.classList.add('comparing');
+                        await this.sleep();
+                        [el1.textContent, el2.textContent] = [el2.textContent, el1.textContent];
+                    }
+                    break;
+                case 'found': step.indices.forEach(i => document.getElementById(`el-${i}`)?.classList.add('found')); await this.sleep(); return;
+                case 'sorted_element': step.indices.forEach(i => document.getElementById(`el-${i}`)?.classList.add('sorted')); break;
+                case 'highlight_min': step.indices.forEach(i => document.getElementById(`el-${i}`)?.classList.add('min-element')); break;
+                case 'eliminate': for (let i = step.range[0]; i <= step.range[1]; i++) { document.getElementById(`el-${i}`)?.classList.add('faded'); } break;
+                
+                // Graph & Traversal Actions
+                case 'enqueue': case 'push': this.drawAuxiliary(step.action === 'enqueue' ? 'queue' : 'stack', step.queue_state || step.stack_state); this.nodeElements[step.node]?.classList.add('visiting'); break;
+                case 'dequeue': case 'pop': this.drawAuxiliary(step.action === 'dequeue' ? 'queue' : 'stack', step.queue_state || step.stack_state); this.nodeElements[step.node]?.classList.add('visiting'); break;
+                case 'visit_node': this.nodeElements[step.node]?.classList.remove('visiting'); this.nodeElements[step.node]?.classList.add('visited'); break;
+                case 'explore_edge': this.linkElements[`${step.from}-${step.to}`]?.classList.add('exploring'); break;
+                case 'neighbor_visited': case 'skip_visited': this.nodeElements[step.node]?.classList.add('faded'); break;
+
+                // Tree Actions (BST Build)
+                case 'insert': this.drawTreeNode(step.value, step.parent, step.direction); this.nodeElements[step.value]?.classList.add('found'); break;
+                case 'traverse': this.nodeElements[step.from]?.classList.add('comparing'); break;
+                
+                // Dijkstra Actions
+                case 'init_distances': Object.keys(step.distances).forEach(node => this.distanceLabels[node].textContent = step.distances[node] === Infinity ? '∞' : step.distances[node]); break;
+                case 'update_distance': this.distanceLabels[step.node].textContent = step.new_dist; this.distanceLabels[step.node].classList.add('updated'); this.nodeElements[step.node]?.classList.add('visiting'); break;
+                case 'highlight_path':
+                    for (let i = 0; i < step.path.length - 1; i++) {
+                        this.nodeElements[step.path[i]]?.classList.add('path-node');
+                        this.linkElements[`${step.path[i]}-${step.path[i+1]}`]?.classList.add('path-link');
+                    }
+                    this.nodeElements[step.path.at(-1)]?.classList.add('path-node');
+                    break;
+
+                // Knapsack (DP) Actions
+                case 'init_table': this.drawDPTable(step.rows, step.cols, step.weights, step.values); break;
+                case 'highlight_cell': document.getElementById(`cell-${step.cell[0]}-${step.cell[1]}`)?.classList.add('dp-highlight'); break;
+                case 'copy_above':
+                    const fromCell = document.getElementById(`cell-${step.from_cell[0]}-${step.from_cell[1]}`);
+                    const toCell = document.getElementById(`cell-${step.to_cell[0]}-${step.to_cell[1]}`);
+                    fromCell?.classList.add('dp-referenced');
+                    if (toCell) toCell.textContent = step.value;
+                    break;
+                case 'compare_options':
+                    const withoutCell = document.getElementById(`cell-${step.option_without.cell[0]}-${step.option_without.cell[1]}`);
+                    const withCell = document.getElementById(`cell-${step.option_with.cell[0]}-${step.option_with.cell[1]}`);
+                    const resultCell = document.getElementById(`cell-${step.cell[0]}-${step.cell[1]}`);
+                    withoutCell?.classList.add('dp-referenced');
+                    withCell?.classList.add('dp-referenced');
+                    if (resultCell) resultCell.textContent = step.result;
+                    break;
+            }
+            await this.sleep();
+        }
+        this.updateLog("Animation complete.");
+    }
+}
+
+================================================================================
+FILE: ./static/js/main.js
+--------------------------------------------------------------------------------
+// static/js/main.js
+
+document.addEventListener('DOMContentLoaded', () => {
+    let ALL_CONTENT = {};
+    let currentData = null;
+    let currentDataType = 'array';
+    const animator = new Animator('visualization-container', 'aux-visualization-container', 'status-log', 'speed-slider');
+
+    const UI = {
+        dsSelect: document.getElementById('ds-select'),
+        algoSelect: document.getElementById('algo-select'),
+        dataSizeInput: document.getElementById('data-size'),
+        runBtn: document.getElementById('run-btn'),
+        generationControls: document.getElementById('generation-controls'),
+        targetInputGroup: document.getElementById('target-input-group'),
+        targetValueInput: document.getElementById('target-value'),
+        startNodeGroup: document.getElementById('start-node-group'),
+        startNodeSelect: document.getElementById('start-node-select'),
+        endNodeGroup: document.getElementById('end-node-group'),
+        endNodeSelect: document.getElementById('end-node-select'),
+        info: { title: document.getElementById('info-title'), idea: document.getElementById('info-idea'), pseudo: document.getElementById('info-pseudo'), timeBest: document.getElementById('time-best'), timeAvg: document.getElementById('time-avg'), timeWorst: document.getElementById('time-worst'), spaceWorst: document.getElementById('space-worst'), }
+    };
+
+    async function initialize() {
+        try {
+            const response = await fetch('/get_content');
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            ALL_CONTENT = await response.json();
+            populateDataStructureSelect();
+            handleDataStructureChange();
+        } catch (error) {
+            console.error("Fatal Error:", error);
+            animator.updateLog("Error: Connection to the server failed. Please check the console and ensure the server is running correctly.");
+        }
+    }
+
+    function populateDataStructureSelect() {
+        UI.dsSelect.innerHTML = '';
+        Object.keys(ALL_CONTENT.data_structures).forEach(dsKey => {
+            if (Object.values(ALL_CONTENT.algorithms).some(algo => algo.ds === dsKey)) {
+                const ds = ALL_CONTENT.data_structures[dsKey];
+                const option = document.createElement('option');
+                option.value = dsKey;
+                option.textContent = ds.name;
+                UI.dsSelect.appendChild(option);
+            }
+        });
+    }
+
+    function populateAlgoSelect() {
+        const selectedDs = UI.dsSelect.value;
+        UI.algoSelect.innerHTML = '';
+        Object.keys(ALL_CONTENT.algorithms).forEach(key => {
+            if (ALL_CONTENT.algorithms[key].ds === selectedDs) {
+                const algo = ALL_CONTENT.algorithms[key];
+                const option = document.createElement('option');
+                option.value = key;
+                option.textContent = algo.name;
+                UI.algoSelect.appendChild(option);
+            }
+        });
+        handleAlgorithmChange();
+    }
+
+    function updateGenerationControls() {
+        UI.generationControls.querySelectorAll('button').forEach(btn => btn.style.display = 'none');
+        const sizeLabel = document.querySelector('label[for="data-size"]');
+        switch (currentDataType) {
+            case 'array': document.getElementById('generate-random-array-btn').style.display = 'block'; document.getElementById('generate-sorted-array-btn').style.display = 'block'; sizeLabel.textContent = "Array Size:"; break;
+            case 'tree': document.getElementById('generate-tree-btn').style.display = 'block'; sizeLabel.textContent = "Number of Nodes:"; break;
+            case 'graph': document.getElementById('generate-graph-btn').style.display = 'block'; sizeLabel.textContent = "Number of Nodes:"; break;
+            case 'conceptual': sizeLabel.textContent = "Input N value (e.g., for Fib):"; break;
+        }
+    }
+
+    function updateExecutionInputs() {
+        const algoKey = UI.algoSelect.value;
+        const algo = ALL_CONTENT.algorithms[algoKey];
+        UI.targetInputGroup.style.display = 'none';
+        UI.startNodeGroup.style.display = 'none';
+        UI.endNodeGroup.style.display = 'none';
+        if (!algo) return;
+        if (algo.category === 'Searching') { UI.targetInputGroup.style.display = 'block'; }
+        if (['Graph Traversal', 'Shortest Path'].includes(algo.category)) { UI.startNodeGroup.style.display = 'block'; }
+        if (algoKey === 'dijkstra') { UI.endNodeGroup.style.display = 'block'; }
+    }
+
+    function updateInfoPanel() {
+        const algoKey = UI.algoSelect.value;
+        if (!algoKey || !ALL_CONTENT.algorithms[algoKey]) return;
+        const content = ALL_CONTENT.algorithms[algoKey];
+        UI.info.title.textContent = content.name;
+        UI.info.idea.textContent = content.idea;
+        UI.info.pseudo.textContent = content.pseudocode.trim();
+        UI.info.timeBest.textContent = content.complexity.time_best;
+        UI.info.timeAvg.textContent = content.complexity.time_avg;
+        UI.info.timeWorst.textContent = content.complexity.time_worst;
+        UI.info.spaceWorst.textContent = content.complexity.space;
+    }
+
+    function setControlsDisabled(disabled) {
+        UI.runBtn.disabled = disabled;
+        UI.dsSelect.disabled = disabled;
+        UI.algoSelect.disabled = disabled;
+        UI.dataSizeInput.disabled = disabled;
+        UI.generationControls.querySelectorAll('button').forEach(btn => btn.disabled = disabled);
+    }
+
+    // =================================================================
+    // 3. EVENT HANDLERS & DATA FLOW
+    // =================================================================
+
+    function handleDataStructureChange() {
+        currentDataType = UI.dsSelect.value;
+        populateAlgoSelect();
+        updateGenerationControls();
+        if (currentDataType !== 'conceptual') {
+            generateData();
+        } else {
+            // For conceptual types, just clear the board, no data generation needed
+            animator.clearAll();
+            animator.updateLog("Select a conceptual algorithm and click Run.");
+        }
+    }
+
+    function handleAlgorithmChange() {
+        updateExecutionInputs();
+        updateInfoPanel();
+    }
+
+    async function generateData(isSorted = false) {
+        setControlsDisabled(true);
+        animator.updateLog(`Generating ${currentDataType}...`);
+        try {
+            const response = await fetch('/generate_data', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ size: UI.dataSizeInput.value, dtype: currentDataType, sorted: isSorted })
+            });
+            currentData = await response.json();
+            animator.drawInitialState(currentDataType, currentData);
+            animator.updateLog("New data generated. Ready to run an algorithm.");
+
+            if (currentDataType === 'graph' && currentData.nodes) {
+                UI.startNodeSelect.innerHTML = '';
+                UI.endNodeSelect.innerHTML = '';
+                Object.keys(currentData.nodes).sort().forEach(nodeId => {
+                    const option = document.createElement('option');
+                    option.value = nodeId;
+                    option.textContent = `Node ${nodeId}`;
+                    UI.startNodeSelect.appendChild(option.cloneNode(true));
+                    UI.endNodeSelect.appendChild(option);
+                });
+            }
+        } catch (error) {
+            console.error("Failed to generate data:", error);
+            animator.updateLog("Error: Could not generate data from server.");
+        } finally {
+            setControlsDisabled(false);
+        }
+    }
+
+    async function runAlgorithm() {
+        const algoKey = UI.algoSelect.value;
+        const algoInfo = ALL_CONTENT.algorithms[algoKey];
+        if (!algoInfo) return;
+
+        // Initialize parameters for the API call
+        const params = { algorithm: algoKey };
+
+        // Handle parameter gathering based on algorithm type
+        // This is a much more robust way to build the params object
+        switch (algoInfo.ds) {
+            case 'array':
+            case 'tree':
+            case 'graph':
+                if (!currentData) {
+                    animator.updateLog("Please generate data first.");
+                    return;
+                }
+                params.input_data = currentData;
+                if (algoInfo.category === 'Searching') {
+                    if (!UI.targetValueInput.value) {
+                        animator.updateLog("Please enter a target value.");
+                        return;
+                    }
+                    params.target = UI.targetValueInput.value;
+                }
+                if (['Graph Traversal', 'Shortest Path'].includes(algoInfo.category)) {
+                    params.start_node = UI.startNodeSelect.value;
+                }
+                if (algoKey === 'dijkstra') {
+                    params.end_node = UI.endNodeSelect.value;
+                }
+                break;
+
+            case 'conceptual':
+                // For conceptual algorithms, we take 'N' from the main size input
+                const nValue = UI.dataSizeInput.value;
+                if (!nValue || nValue < 0) {
+                    animator.updateLog("Please enter a valid non-negative N value.");
+                    return;
+                }
+                params.n = nValue;
+                // Note: More complex conceptual algos (Knapsack) would need more UI elements.
+                // For this project, we'll keep it simple.
+                break;
+        }
+
+        setControlsDisabled(true);
+        try {
+            const response = await fetch('/run_algorithm', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(params)
+            });
+            const result = await response.json();
+            if (result.error) throw new Error(result.error);
+
+            // Redraw initial state only if it's a data-driven algorithm
+            if (algoInfo.ds !== 'conceptual') {
+                 animator.drawInitialState(currentDataType, currentData);
+            } else {
+                 animator.clearAll(); // Clear board for conceptual animations
+            }
+           
+            await animator.runAnimation(result.steps);
+        } catch (error) {
+            console.error("Algorithm execution failed:", error);
+            animator.updateLog(`Execution Error: ${error.message}`);
+        } finally {
+            setControlsDisabled(false);
+        }
+    }
+
+    function handleDataStructureChange() {
+        currentDataType = UI.dsSelect.value;
+        populateAlgoSelect();
+        updateGenerationControls();
+        if (currentDataType !== 'conceptual') { generateData(); } 
+        else { animator.clearAll(); animator.updateLog("Select a conceptual algorithm and click Run."); }
+    }
+
+    function handleAlgorithmChange() {
+        updateInfoPanel();
+        updateExecutionInputs();
+        
+        const algoKey = UI.algoSelect.value;
+        if (algoKey && ALL_CONTENT.algorithms[algoKey]) {
+            const algo = ALL_CONTENT.algorithms[algoKey];
+            currentDataType = algo.ds;
+            updateGenerationControls();
+        }
+    }
+
+    // =================================================================
+    // 5. ATTACH EVENT LISTENERS
+    // =================================================================
+    UI.dsSelect.addEventListener('change', handleDataStructureChange);
+    UI.algoSelect.addEventListener('change', handleAlgorithmChange);
+    UI.runBtn.addEventListener('click', runAlgorithm);
+    document.getElementById('generate-random-array-btn').addEventListener('click', () => generateData(false));
+    document.getElementById('generate-sorted-array-btn').addEventListener('click', () => generateData(true));
+    document.getElementById('generate-tree-btn').addEventListener('click', () => generateData());
+    document.getElementById('generate-graph-btn').addEventListener('click', () => generateData());
+    // Tab functionality for info panel
+    document.querySelectorAll('.tab-link').forEach(button => {
+        button.addEventListener('click', () => {
+            document.querySelector('.tab-link.active')?.classList.remove('active');
+            document.querySelector('.tab-content.active')?.classList.remove('active');
+            button.classList.add('active');
+            document.getElementById(button.dataset.tab).classList.add('active');
+        });
+    });
+
+    // --- KICK OFF THE APPLICATION ---
+    initialize();
+});
+
+================================================================================
+FILE: ./templates/index.html
+--------------------------------------------------------------------------------
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Algorithmic Mirror</title>
+    <!-- Link to the stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- Google Fonts for a modern look -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <h1>📜 Algorithmic Mirror</h1>
+        <p>A Grimoire of Computational Logic</p>
+    </header>
+
+    <main class="container">
+        <!-- ================================================================= -->
+        <!-- CONTROLS PANEL (LEFT)                                           -->
+        <!-- ================================================================= -->
+        <section class="panel controls-panel">
+            <h2>Controls</h2>
+            
+            <!-- Data Structure & Algorithm Selection -->
+            <div class="control-group">
+                <label for="ds-select">Data Structure:</label>
+                <select id="ds-select">
+                    <!-- Options will be populated by JS from the content file -->
+                </select>
+            </div>
+            <div class="control-group">
+                <label for="algo-select">Algorithm:</label>
+                <select id="algo-select">
+                    <!-- Options will be populated by JS based on the selected DS -->
+                </select>
+            </div>
+            
+            <hr>
+            
+            <!-- Data Generation Section -->
+            <h3>Generate Data</h3>
+            <div class="control-group">
+                <label for="data-size">Size / Number of Nodes:</label>
+                <input type="number" id="data-size" value="12" min="3" max="50">
+            </div>
+            <!-- Contextual Generation Buttons: JS will show/hide these -->
+            <div id="generation-controls">
+                <button id="generate-random-array-btn">Generate Random Array</button>
+                <button id="generate-sorted-array-btn" style="display:none;">Generate Sorted Array</button>
+                <button id="generate-tree-btn" style="display:none;">Generate Tree</button>
+                <button id="generate-graph-btn" style="display:none;">Load Example Graph</button>
+            </div>
+
+            <hr>
+
+            <!-- Execution Section -->
+            <h3>Execution</h3>
+            <!-- Contextual Inputs: JS will show/hide these based on algorithm -->
+            <div id="execution-inputs">
+                <div class="control-group" id="target-input-group" style="display:none;">
+                    <label for="target-value">Target Value (for searching):</label>
+                    <input type="number" id="target-value" placeholder="e.g., 42">
+                </div>
+                <div class="control-group" id="start-node-group" style="display:none;">
+                    <label for="start-node-select">Start Node (for traversals):</label>
+                    <select id="start-node-select">
+                        <!-- Options populated by JS after graph is loaded -->
+                    </select>
+                </div>
+            </div>
+
+            <!-- Main Action Button -->
+            <button id="run-btn" disabled>Run Algorithm</button>
+            
+            <!-- Animation Speed Control -->
+            <div class="control-group">
+                <label for="speed-slider">Animation Speed (Fast to Slow):</label>
+                <input type="range" id="speed-slider" min="50" max="1500" value="500" step="50">
+            </div>
+        </section>
+
+        <!-- ================================================================= -->
+        <!-- VISUALIZATION PANEL (CENTER)                                    -->
+        <!-- ================================================================= -->
+        <section class="panel visualization-panel">
+            <h2 id="visualization-title">Visualization</h2>
+            <!-- Main container for visuals. JS will inject array divs or an SVG here. -->
+            <div id="visualization-container">
+                <!-- Visuals Rendered Here -->
+            </div>
+            <!-- Separate container for auxiliary structures like queues, stacks, or DP tables. -->
+            <div id="aux-visualization-container">
+                <!-- Auxiliary Visuals Rendered Here (e.g., Queue for BFS) -->
+            </div>
+            <!-- Log for step-by-step messages. -->
+            <div id="status-log">
+                <p>Welcome! Select a data structure to begin.</p>
+            </div>
+        </section>
+
+        <!-- ================================================================= -->
+        <!-- INFORMATION PANEL (RIGHT)                                       -->
+        <!-- ================================================================= -->
+        <section class="panel info-panel">
+            <h2 id="info-title">Algorithm Details</h2>
+            
+            <!-- Tab navigation for switching between info sections -->
+            <div class="info-tabs">
+                <button class="tab-link active" data-tab="idea-tab">Key Idea</button>
+                <button class="tab-link" data-tab="pseudo-tab">Pseudocode</button>
+                <button class="tab-link" data-tab="complexity-tab">Complexity</button>
+            </div>
+            
+            <!-- Content for "Key Idea" tab -->
+            <div id="idea-tab" class="tab-content active">
+                <p id="info-idea">Select an algorithm to see its core concept.</p>
+            </div>
+            
+            <!-- Content for "Pseudocode" tab -->
+            <div id="pseudo-tab" class="tab-content">
+                <pre><code id="info-pseudo">Select an algorithm to see its pseudocode.</code></pre>
+            </div>
+            
+            <!-- Content for "Complexity" tab -->
+            <div id="complexity-tab" class="tab-content">
+                <h3>Time Complexity</h3>
+                <ul>
+                    <li><strong>Best Case:</strong> <span id="time-best">...</span></li>
+                    <li><strong>Average Case:</strong> <span id="time-avg">...</span></li>
+                    <li><strong>Worst Case:</strong> <span id="time-worst">...</span></li>
+                </ul>
+                <h3>Space Complexity</h3>
+                <ul>
+                    <li><strong>Worst Case:</strong> <span id="space-worst">...</span></li>
+                </ul>
+            </div>
+        </section>
+    </main>
+
+    <!-- JavaScript files are loaded at the end of the body for faster page rendering -->
+    <script src="{{ url_for('static', filename='js/animator.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
+
+--- END OF PROJECT DUMP ---

@@ -100,3 +100,100 @@ def selection_sort(data):
 
     steps.append({'action': 'complete', 'message': 'Array is fully sorted.'})
     return steps
+
+
+def insertion_sort(data):
+    """Generates animation steps for Insertion Sort."""
+    steps = []
+    arr = list(data)
+    for i in range(1, len(arr)):
+        key = arr[i]
+        steps.append({'action': 'highlight_key', 'index': i, 'key': key, 'message': f'Selecting {key} as the key to insert.'})
+        j = i - 1
+        while j >= 0 and key < arr[j]:
+            steps.append({'action': 'compare_shift', 'indices': [j, j+1], 'message': f'{key} < {arr[j]}. Shifting {arr[j]} to the right.'})
+            arr[j + 1] = arr[j]
+            steps.append({'action': 'shift_right', 'from': j, 'to': j + 1, 'value': arr[j]})
+            j -= 1
+        arr[j + 1] = key
+        steps.append({'action': 'insert_key', 'index': j + 1, 'key': key, 'message': f'Inserting key {key} at position {j+1}.'})
+
+    steps.append({'action': 'complete', 'message': 'Array is fully sorted.'})
+    return steps
+
+def merge_sort(data):
+    """Generates animation steps for Merge Sort."""
+    steps = []
+    arr = list(data)
+
+    def _merge_sort_recursive(sub_array, offset):
+        if len(sub_array) > 1:
+            mid = len(sub_array) // 2
+            left_half = sub_array[:mid]
+            right_half = sub_array[mid:]
+            
+            steps.append({'action': 'divide', 'range': (offset, offset + len(sub_array) - 1), 'mid': offset + mid, 'message': f'Dividing array at index {offset+mid}.'})
+            
+            _merge_sort_recursive(left_half, offset)
+            _merge_sort_recursive(right_half, offset + mid)
+
+            i = j = k = 0
+            steps.append({'action': 'merge_start', 'range': (offset, offset + len(sub_array) - 1), 'message': f'Merging subarrays.'})
+            
+            # Merging
+            while i < len(left_half) and j < len(right_half):
+                steps.append({'action': 'merge_compare', 'left_index': offset + i, 'right_index': offset + mid + j})
+                if left_half[i] < right_half[j]:
+                    sub_array[k] = left_half[i]
+                    i += 1
+                else:
+                    sub_array[k] = right_half[j]
+                    j += 1
+                k += 1
+
+            while i < len(left_half):
+                sub_array[k] = left_half[i]
+                i += 1
+                k += 1
+            while j < len(right_half):
+                sub_array[k] = right_half[j]
+                j += 1
+                k += 1
+
+            # Update the main array visualization
+            steps.append({'action': 'update_range', 'range_start': offset, 'values': sub_array, 'message': 'Subarray sorted and merged.'})
+
+    _merge_sort_recursive(arr, 0)
+    steps.append({'action': 'complete', 'message': 'Array is fully sorted.'})
+    return steps
+
+def quick_sort(data):
+    """Generates animation steps for Quick Sort."""
+    steps = []
+    arr = list(data)
+
+    def _partition(low, high):
+        pivot = arr[high]
+        steps.append({'action': 'pivot', 'index': high, 'message': f'Choosing {pivot} as pivot for range [{low}, {high}].'})
+        i = low - 1
+        for j in range(low, high):
+            steps.append({'action': 'compare', 'indices': [j, high], 'message': f'Comparing {arr[j]} with pivot {pivot}.'})
+            if arr[j] < pivot:
+                i += 1
+                steps.append({'action': 'swap', 'indices': [i, j], 'message': f'{arr[j]} < {pivot}. Swapping {arr[i]} and {arr[j]}.'})
+                arr[i], arr[j] = arr[j], arr[i]
+        
+        steps.append({'action': 'swap', 'indices': [i + 1, high], 'message': f'Placing pivot. Swapping {arr[i+1]} and {arr[high]}.'})
+        arr[i + 1], arr[high] = arr[high], arr[i + 1]
+        steps.append({'action': 'sorted_element', 'indices': [i + 1]})
+        return i + 1
+
+    def _quick_sort_recursive(low, high):
+        if low < high:
+            pi = _partition(low, high)
+            _quick_sort_recursive(low, pi - 1)
+            _quick_sort_recursive(pi + 1, high)
+
+    _quick_sort_recursive(0, len(arr) - 1)
+    steps.append({'action': 'complete', 'message': 'Array is fully sorted.'})
+    return steps

@@ -96,3 +96,72 @@ def binary_search(data, target):
         'message': f'Target {target} not found in the array.'
     })
     return steps
+
+def jump_search(data, target):
+    """Generates animation steps for Jump Search."""
+    steps = []
+    n = len(data)
+    step = int(math.sqrt(n))
+    prev = 0
+
+    if not all(data[i] <= data[i+1] for i in range(len(data)-1)):
+        steps.append({'action': 'error', 'message': 'Error: Jump Search requires a sorted array!'})
+        return steps
+
+    steps.append({'action': 'message', 'message': f'Block size (step) is √{n} ≈ {step}.'})
+
+    # Jumping ahead in blocks
+    while data[min(step, n) - 1] < target:
+        steps.append({'action': 'compare_block', 'indices': list(range(prev, min(step, n))), 'message': f'Comparing target with end of block [{prev}...{min(step,n)-1}]. {data[min(step, n) - 1]} < {target}. Jumping.'})
+        prev = step
+        step += int(math.sqrt(n))
+        if prev >= n:
+            steps.append({'action': 'not_found', 'message': 'Target is larger than all elements.'})
+            return steps
+
+    steps.append({'action': 'message', 'message': f'Target may be in block [{prev}...{min(step,n)-1}]. Starting linear search.'})
+
+    # Linear search within the identified block
+    for i in range(prev, min(step, n)):
+        steps.append({'action': 'compare', 'indices': [i], 'message': f'Comparing target ({target}) with array[{i}] ({data[i]})'})
+        if data[i] == target:
+            steps.append({'action': 'found', 'indices': [i], 'message': f'Target {target} found at index {i}!'})
+            return steps
+
+    steps.append({'action': 'not_found', 'message': f'Target {target} not found in the array.'})
+    return steps
+
+def interpolation_search(data, target):
+    """Generates animation steps for Interpolation Search."""
+    steps = []
+    low, high = 0, len(data) - 1
+
+    if not all(data[i] <= data[i+1] for i in range(len(data)-1)):
+        steps.append({'action': 'error', 'message': 'Error: Interpolation Search requires a sorted array!'})
+        return steps
+
+    while low <= high and data[low] <= target <= data[high]:
+        if low == high:
+            if data[low] == target:
+                steps.append({'action': 'found', 'indices': [low], 'message': f'Target found at index {low}.'})
+            else:
+                steps.append({'action': 'not_found', 'message': 'Target not found.'})
+            return steps
+
+        # Probing the position with interpolation formula
+        pos = low + int(((float(high - low) / (data[high] - data[low])) * (target - data[low])))
+        steps.append({'action': 'probe', 'index': pos, 'message': f'Probing position {pos} based on data distribution.'})
+        steps.append({'action': 'compare', 'indices': [pos], 'message': f'Comparing target ({target}) with array[{pos}] ({data[pos]})'})
+
+        if data[pos] == target:
+            steps.append({'action': 'found', 'indices': [pos], 'message': f'Target {target} found at index {pos}!'})
+            return steps
+        if data[pos] < target:
+            low = pos + 1
+            steps.append({'action': 'eliminate', 'range': (0, pos), 'message': f'Target is larger. New search range is [{low}, {high}].'})
+        else:
+            high = pos - 1
+            steps.append({'action': 'eliminate', 'range': (pos, len(data)-1), 'message': f'Target is smaller. New search range is [{low}, {high}].'})
+            
+    steps.append({'action': 'not_found', 'message': f'Target {target} not found.'})
+    return steps

@@ -1,70 +1,43 @@
 // static/js/main.js
 
 document.addEventListener('DOMContentLoaded', () => {
-    // =================================================================
-    // 1. STATE MANAGEMENT & INITIALIZATION
-    // =================================================================
     let ALL_CONTENT = {};
     let currentData = null;
-    let currentDataType = 'array'; // Default on load
-    const animator = new Animator(
-        'visualization-container',
-        'aux-visualization-container',
-        'status-log',
-        'speed-slider'
-    );
+    let currentDataType = 'array';
+    const animator = new Animator('visualization-container', 'aux-visualization-container', 'status-log', 'speed-slider');
 
-    // --- DOM ELEMENT REFERENCES ---
-    // A single object to hold all UI element references for clean access
     const UI = {
         dsSelect: document.getElementById('ds-select'),
         algoSelect: document.getElementById('algo-select'),
         dataSizeInput: document.getElementById('data-size'),
         runBtn: document.getElementById('run-btn'),
         generationControls: document.getElementById('generation-controls'),
-        // Input groups that are shown/hidden contextually
         targetInputGroup: document.getElementById('target-input-group'),
         targetValueInput: document.getElementById('target-value'),
         startNodeGroup: document.getElementById('start-node-group'),
         startNodeSelect: document.getElementById('start-node-select'),
         endNodeGroup: document.getElementById('end-node-group'),
         endNodeSelect: document.getElementById('end-node-select'),
-        // Info panel elements
-        info: {
-            title: document.getElementById('info-title'),
-            idea: document.getElementById('info-idea'),
-            pseudo: document.getElementById('info-pseudo'),
-            timeBest: document.getElementById('time-best'),
-            timeAvg: document.getElementById('time-avg'),
-            timeWorst: document.getElementById('time-worst'),
-            spaceWorst: document.getElementById('space-worst'),
-        }
+        info: { title: document.getElementById('info-title'), idea: document.getElementById('info-idea'), pseudo: document.getElementById('info-pseudo'), timeBest: document.getElementById('time-best'), timeAvg: document.getElementById('time-avg'), timeWorst: document.getElementById('time-worst'), spaceWorst: document.getElementById('space-worst'), }
     };
 
-    /**
-     * Kicks off the application by fetching content and setting up the initial UI.
-     */
     async function initialize() {
         try {
             const response = await fetch('/get_content');
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             ALL_CONTENT = await response.json();
             populateDataStructureSelect();
-            handleDataStructureChange(); // Set up UI for the default selection
+            handleDataStructureChange();
         } catch (error) {
-            console.error("Fatal Error: Could not load initial content from server.", error);
-            animator.updateLog("Error: Connection to the server failed. Please refresh the page.");
+            console.error("Fatal Error:", error);
+            animator.updateLog("Error: Connection to the server failed. Please check the console and ensure the server is running correctly.");
         }
     }
-
-    // =================================================================
-    // 2. UI UPDATE & MANAGEMENT
-    // =================================================================
 
     function populateDataStructureSelect() {
         UI.dsSelect.innerHTML = '';
         Object.keys(ALL_CONTENT.data_structures).forEach(dsKey => {
-            const hasAlgos = Object.values(ALL_CONTENT.algorithms).some(algo => algo.ds === dsKey);
-            if (hasAlgos) {
+            if (Object.values(ALL_CONTENT.algorithms).some(algo => algo.ds === dsKey)) {
                 const ds = ALL_CONTENT.data_structures[dsKey];
                 const option = document.createElement('option');
                 option.value = dsKey;
@@ -91,50 +64,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateGenerationControls() {
         UI.generationControls.querySelectorAll('button').forEach(btn => btn.style.display = 'none');
-        // The 'data-size' input label should be context-aware
         const sizeLabel = document.querySelector('label[for="data-size"]');
-
         switch (currentDataType) {
-            case 'array':
-                document.getElementById('generate-random-array-btn').style.display = 'block';
-                document.getElementById('generate-sorted-array-btn').style.display = 'block';
-                sizeLabel.textContent = "Array Size:";
-                break;
-            case 'tree':
-                document.getElementById('generate-tree-btn').style.display = 'block';
-                sizeLabel.textContent = "Number of Nodes:";
-                break;
-            case 'graph':
-                document.getElementById('generate-graph-btn').style.display = 'block';
-                sizeLabel.textContent = "Number of Nodes:";
-                break;
-            case 'conceptual':
-                // For conceptual algorithms, the 'size' input is used for 'N'
-                sizeLabel.textContent = "Input N value (e.g., for Fib):";
-                break;
+            case 'array': document.getElementById('generate-random-array-btn').style.display = 'block'; document.getElementById('generate-sorted-array-btn').style.display = 'block'; sizeLabel.textContent = "Array Size:"; break;
+            case 'tree': document.getElementById('generate-tree-btn').style.display = 'block'; sizeLabel.textContent = "Number of Nodes:"; break;
+            case 'graph': document.getElementById('generate-graph-btn').style.display = 'block'; sizeLabel.textContent = "Number of Nodes:"; break;
+            case 'conceptual': sizeLabel.textContent = "Input N value (e.g., for Fib):"; break;
         }
     }
 
     function updateExecutionInputs() {
         const algoKey = UI.algoSelect.value;
         const algo = ALL_CONTENT.algorithms[algoKey];
-
-        // Hide all contextual input fields by default
         UI.targetInputGroup.style.display = 'none';
         UI.startNodeGroup.style.display = 'none';
         UI.endNodeGroup.style.display = 'none';
-
-        // Show inputs based on the algorithm's specific needs
-        if (algo?.category === 'Searching') {
-            UI.targetInputGroup.style.display = 'block';
-        }
-        if (['Graph Traversal', 'Shortest Path'].includes(algo?.category)) {
-            UI.startNodeGroup.style.display = 'block';
-        }
-        if (algoKey === 'dijkstra') {
-            UI.endNodeGroup.style.display = 'block';
-        }
+        if (!algo) return;
+        if (algo.category === 'Searching') { UI.targetInputGroup.style.display = 'block'; }
+        if (['Graph Traversal', 'Shortest Path'].includes(algo.category)) { UI.startNodeGroup.style.display = 'block'; }
+        if (algoKey === 'dijkstra') { UI.endNodeGroup.style.display = 'block'; }
     }
+
 
     function updateInfoPanel() {
         const algoKey = UI.algoSelect.value;
@@ -284,6 +234,28 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function handleDataStructureChange() {
+        currentDataType = UI.dsSelect.value;
+        populateAlgoSelect();
+        updateGenerationControls();
+        if (currentDataType !== 'conceptual') { generateData(); } 
+        else { animator.clearAll(); animator.updateLog("Select a conceptual algorithm and click Run."); }
+    }
+
+    function handleAlgorithmChange() {
+        updateInfoPanel();
+        updateExecutionInputs();
+        
+        const algoKey = UI.algoSelect.value;
+        if (algoKey && ALL_CONTENT.algorithms[algoKey]) {
+            const algo = ALL_CONTENT.algorithms[algoKey];
+            currentDataType = algo.ds;
+            updateGenerationControls();
+        }
+    }
+
+
+
     // =================================================================
     // 5. ATTACH EVENT LISTENERS
     // =================================================================
@@ -294,7 +266,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('generate-sorted-array-btn').addEventListener('click', () => generateData(true));
     document.getElementById('generate-tree-btn').addEventListener('click', () => generateData());
     document.getElementById('generate-graph-btn').addEventListener('click', () => generateData());
-
     // Tab functionality for info panel
     document.querySelectorAll('.tab-link').forEach(button => {
         button.addEventListener('click', () => {
